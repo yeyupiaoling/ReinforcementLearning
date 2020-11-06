@@ -50,19 +50,20 @@ class Agent(parl.Agent):
             act = env.action_space.sample()
         else:
             # 预测动作
-            i = self.predict(obs)
-            act = actions[i]
+            act = self.predict(obs, actions)
         self.e_greed = max(0.01, self.e_greed - self.e_greed_decrement)
         return act
 
     # 预测动作
-    def predict(self, obs):
+    def predict(self, obs, actions):
         obs = np.expand_dims(obs, axis=0)
         pred_Q = self.fluid_executor.run(program=self.pred_program,
                                          feed={'obs': obs.astype('float32')},
                                          fetch_list=[self.value])
         pred_Q = np.squeeze(pred_Q)
-        act = np.argmax(pred_Q)
+        i = np.argmax(pred_Q)
+        print(i)
+        act = actions[i]
         return act
 
     # 训练模型，在固定训练次数将参数更新到目标模型

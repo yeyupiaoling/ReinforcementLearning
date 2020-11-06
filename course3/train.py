@@ -68,8 +68,9 @@ def evaluate(agent, env, render=False):
     episode_reward = 0
     isOver = False
     while not isOver:
-        i = agent.predict(obs)
-        action = ACTIONS[i]
+        obs = obs.transpose((2, 0, 1))
+        obs = obs / 255.0
+        action = agent.predict(obs)
         if render:
             # 显示视频图像
             env.render()
@@ -111,7 +112,7 @@ def main():
     episode = 0
     while episode < MAX_EPISODE:
         # 训练
-        for i in range(0, 50):
+        for i in range(1):
             train_reward = run_episode(agent, env, rpm, render=True)
             episode += 1
             logger.info('Episode: {}, Reward: {}, e_greed: {}'.format(episode, train_reward, agent.e_greed))
