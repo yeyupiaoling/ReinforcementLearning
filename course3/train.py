@@ -16,6 +16,7 @@ ENV_SEED = 1  # 固定随机情况
 E_GREED = 0.9  # 探索初始概率
 E_GREED_DECREMENT = 1e-6  # 在训练过程中，降低探索的概率
 MAX_EPISODE = 200000  # 训练次数
+SHOW_PLAY = False  # 显示游戏界面
 
 
 def run_episode(agent, env, rpm, render=False):
@@ -100,14 +101,14 @@ def main():
 
     # 预热
     while len(rpm) < MEMORY_WARMUP_SIZE:
-        run_episode(agent, env, rpm, render=True)
+        run_episode(agent, env, rpm, render=SHOW_PLAY)
 
     # 开始训练
     episode = 0
     while episode < MAX_EPISODE:
         # 训练
         for i in range(50):
-            train_reward = run_episode(agent, env, rpm, render=True)
+            train_reward = run_episode(agent, env, rpm, render=SHOW_PLAY)
             episode += 1
             logger.info('Episode: {}, Reward: {}, e_greed: {}'.format(episode, train_reward, agent.e_greed))
 
