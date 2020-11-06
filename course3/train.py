@@ -4,7 +4,6 @@ from parl.utils import logger
 from model import Model
 from agent import Agent
 from replay_memory import ReplayMemory
-from utils import create_actions
 
 
 LEARN_FREQ = 5  # 更新参数步数
@@ -17,7 +16,6 @@ ENV_SEED = 1  # 固定随机情况
 E_GREED = 0.9  # 探索初始概率
 E_GREED_DECREMENT = 1e-6  # 在训练过程中，降低探索的概率
 MAX_EPISODE = 200000  # 训练次数
-ACTIONS = []  # 所有动作组合
 
 
 def run_episode(agent, env, rpm, render=False):
@@ -33,7 +31,7 @@ def run_episode(agent, env, rpm, render=False):
             # 显示视频图像
             env.render()
         # 获取随机动作和执行游戏
-        action = agent.sample(obs, env, ACTIONS)
+        action = agent.sample(obs, env)
         next_obs, reward, isOver, info = env.step(action)
         next_obs = next_obs.transpose((2, 0, 1))
         next_obs = next_obs / 255.0
@@ -80,7 +78,6 @@ def evaluate(agent, env, render=False):
 
 
 def main():
-    global ACTIONS
     # 初始化游戏
     env = retro.make(game='SnowBrothers-Nes')
     env.seed(ENV_SEED)
@@ -88,9 +85,6 @@ def main():
     # 游戏的图像形状和动作形状
     obs_dim = (env.observation_space.shape[2], env.observation_space.shape[0], env.observation_space.shape[1])
     action_dim = env.action_space.shape[0]
-
-    # 获取游戏所有的动作组合
-    ACTIONS = create_actions(action_dim)
 
     # 创建存储执行游戏的内存
     rpm = ReplayMemory(MEMORY_SIZE)
@@ -100,7 +94,7 @@ def main():
     algorithm = parl.algorithms.DQN(model, act_dim=2**action_dim, gamma=GAMMA, lr=LEARNING_RATE)
     agent = Agent(algorithm=algorithm,
                   obs_dim=obs_dim,
-                  act_dim=2**action_dim,
+                  act_dim=action_dim,
                   e_greed=E_GREED,
                   e_greed_decrement=E_GREED_DECREMENT)
 
@@ -112,7 +106,7 @@ def main():
     episode = 0
     while episode < MAX_EPISODE:
         # 训练
-        for i in range(1):
+        for i in range(50):
             train_reward = run_episode(agent, env, rpm, render=True)
             episode += 1
             logger.info('Episode: {}, Reward: {}, e_greed: {}'.format(episode, train_reward, agent.e_greed))

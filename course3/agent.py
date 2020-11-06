@@ -1,6 +1,7 @@
 import numpy as np
 import paddle.fluid as fluid
 import parl
+from utils import create_actions
 from parl import layers
 
 
@@ -26,6 +27,9 @@ class Agent(parl.Agent):
         self.e_greed = e_greed
         self.e_greed_decrement = e_greed_decrement
 
+        # 获取游戏所有的动作组合
+        self.actions = create_actions(self.act_dim)
+
     def build_program(self):
         self.pred_program = fluid.Program()
         self.learn_program = fluid.Program()
@@ -43,27 +47,26 @@ class Agent(parl.Agent):
             self.cost = self.alg.learn(obs, action, reward, next_obs, terminal)
 
     # 获取动作
-    def sample(self, obs, env, actions):
+    def sample(self, obs, env):
         sample = np.random.rand()
         if sample < self.e_greed:
             # 随机生成动作
             act = env.action_space.sample()
         else:
             # 预测动作
-            act = self.predict(obs, actions)
+            act = self.predict(obs)
         self.e_greed = max(0.01, self.e_greed - self.e_greed_decrement)
         return act
 
     # 预测动作
-    def predict(self, obs, actions):
+    def predict(self, obs):
         obs = np.expand_dims(obs, axis=0)
         pred_Q = self.fluid_executor.run(program=self.pred_program,
                                          feed={'obs': obs.astype('float32')},
                                          fetch_list=[self.value])
         pred_Q = np.squeeze(pred_Q)
         i = np.argmax(pred_Q)
-        print(i)
-        act = actions[i]
+        act = self.actions[i]
         return act
 
     # 训练模型，在固定训练次数将参数更新到目标模型
