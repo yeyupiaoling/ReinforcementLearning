@@ -51,7 +51,6 @@ class Agent(parl.Agent):
         else:
             # 预测动作
             i = self.predict(obs)
-            print(i)
             act = actions[i]
         self.e_greed = max(0.01, self.e_greed - self.e_greed_decrement)
         return act
