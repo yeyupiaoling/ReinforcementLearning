@@ -18,7 +18,7 @@ GAMMA = 0.99  # 奖励系数
 E_GREED = 0.1  # 探索初始概率
 E_GREED_DECREMENT = 1e-6  # 在训练过程中，降低探索的概率
 MAX_EPISODE = 200000  # 训练次数
-RESIZE_SHAPE = (1, 224, 224)  # 训练缩放的大小，减少模型计算
+RESIZE_SHAPE = (1, 224, 224)  # 训练缩放的大小，减少模型计算，原大小（288, 512）
 SAVE_MODEL_PATH = "models/model.ckpt"  # 保存模型路径
 
 
