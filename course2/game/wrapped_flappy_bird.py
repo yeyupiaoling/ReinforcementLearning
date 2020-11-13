@@ -59,7 +59,7 @@ class GameState:
         self.obs_shape = (SCREENWIDTH, SCREENHEIGHT, 3)
         self.action_dim = 2
 
-    def step(self, action):
+    def step(self, action, is_train=False):
         pygame.event.pump()
 
         reward = 0.1
@@ -138,7 +138,8 @@ class GameState:
         image_data = cv2.flip(image_data, 0)
         image_data = cv2.cvtColor(image_data, cv2.COLOR_RGB2BGR)
         pygame.display.update()
-        FPSCLOCK.tick(FPS)
+        if not is_train:
+            FPSCLOCK.tick(FPS)
         return image_data, reward, isOver
 
     def reset(self):
