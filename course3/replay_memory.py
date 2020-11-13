@@ -1,33 +1,79 @@
-import random
-import collections
 import numpy as np
+from parl.utils import logger
 
 
 class ReplayMemory(object):
-    def __init__(self, max_size):
-        self.buffer = collections.deque(maxlen=max_size)
+    def __init__(self, max_size, obs_dim, act_dim):
+        self.max_size = int(max_size)
+        self.obs_dim = obs_dim
+        self.act_dim = act_dim
 
-    # 添加数据
-    def append(self, exp):
-        self.buffer.append(exp)
+        self.obs = np.zeros((max_size, ) + obs_dim, dtype='float32')
+        self.action = np.zeros((max_size, act_dim), dtype='float32')
+        self.reward = np.zeros((max_size,), dtype='float32')
+        self.terminal = np.zeros((max_size,), dtype='bool')
+        self.next_obs = np.zeros((max_size, ) + obs_dim, dtype='float32')
 
-    # 获取一批数据
-    def sample(self, batch_size):
-        mini_batch = random.sample(self.buffer, batch_size)
-        obs_batch, action_batch, reward_batch, next_obs_batch, done_batch = [], [], [], [], []
+        self._curr_size = 0
+        self._curr_pos = 0
 
-        for experience in mini_batch:
-            s, a, r, s_p, done = experience
-            obs_batch.append(s)
-            action_batch.append(a)
-            reward_batch.append(r)
-            next_obs_batch.append(s_p)
-            done_batch.append(done)
+    def sample_batch(self, batch_size):
+        batch_idx = np.random.randint(self._curr_size - 300 - 1, size=batch_size)
 
-        return np.array(obs_batch).astype('float32'), \
-            np.array(action_batch).astype('float32'), np.array(reward_batch).astype('float32'),\
-            np.array(next_obs_batch).astype('float32'), np.array(done_batch).astype('float32')
+        obs = self.obs[batch_idx]
+        reward = self.reward[batch_idx]
+        action = self.action[batch_idx]
+        next_obs = self.next_obs[batch_idx]
+        terminal = self.terminal[batch_idx]
+        return obs, action, reward, next_obs, terminal
 
-    # 获取当前数据记录的大小
-    def __len__(self):
-        return len(self.buffer)
+    def make_index(self, batch_size):
+        batch_idx = np.random.randint(self._curr_size - 300 - 1, size=batch_size)
+        return batch_idx
+
+    def sample_batch_by_index(self, batch_idx):
+        obs = self.obs[batch_idx]
+        reward = self.reward[batch_idx]
+        action = self.action[batch_idx]
+        next_obs = self.next_obs[batch_idx]
+        terminal = self.terminal[batch_idx]
+        return obs, action, reward, next_obs, terminal
+
+    def append(self, obs, act, reward, next_obs, terminal):
+        if self._curr_size < self.max_size:
+            self._curr_size += 1
+        self.obs[self._curr_pos] = obs
+        self.action[self._curr_pos] = act
+        self.reward[self._curr_pos] = reward
+        self.next_obs[self._curr_pos] = next_obs
+        self.terminal[self._curr_pos] = terminal
+        self._curr_pos = (self._curr_pos + 1) % self.max_size
+
+    def size(self):
+        return self._curr_size
+
+    def save(self, pathname):
+        other = np.array([self._curr_size, self._curr_pos], dtype=np.int32)
+        np.savez(
+            pathname,
+            obs=self.obs,
+            action=self.action,
+            reward=self.reward,
+            terminal=self.terminal,
+            next_obs=self.next_obs,
+            other=other)
+
+    def load(self, pathname):
+        data = np.load(pathname)
+        other = data['other']
+        if int(other[0]) > self.max_size:
+            logger.warn('loading from a bigger size rpm!')
+        self._curr_size = min(int(other[0]), self.max_size)
+        self._curr_pos = min(int(other[1]), self.max_size - 1)
+
+        self.obs[:self._curr_size] = data['obs'][:self._curr_size]
+        self.action[:self._curr_size] = data['action'][:self._curr_size]
+        self.reward[:self._curr_size] = data['reward'][:self._curr_size]
+        self.terminal[:self._curr_size] = data['terminal'][:self._curr_size]
+        self.next_obs[:self._curr_size] = data['next_obs'][:self._curr_size]
+        logger.info("[load rpm]memory loade from {}".format(pathname))
