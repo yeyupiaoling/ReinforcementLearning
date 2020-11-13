@@ -7,16 +7,15 @@ from model import Model
 from parl.utils import logger, action_mapping
 from replay_memory import ReplayMemory
 
-ACTOR_LR = 1e-4
-CRITIC_LR = 1e-3
+ACTOR_LR = 1e-4  # actor模型的学习率
+CRITIC_LR = 1e-3  # critic模型的学习速率
 GAMMA = 0.99  # 奖励系数
 TAU = 0.001  # 衰减参数
-MEMORY_SIZE = int(2e3)  # 内存记忆
+MEMORY_SIZE = int(1e4)  # 内存记忆
 MEMORY_WARMUP_SIZE = 1e3  # 热身大小
 BATCH_SIZE = 128  # batch大小
 REWARD_SCALE = 0.1  # 奖励比例
 ENV_SEED = 1  # 固定随机情况
-SHOW_PLAY = False  # 显示游戏界面
 
 
 def run_train_episode(env, agent, rpm, render=False):
@@ -102,25 +101,26 @@ def main():
 
     print("开始预热...")
     while rpm.size() < MEMORY_WARMUP_SIZE:
-        run_train_episode(env, agent, rpm)
+        run_train_episode(env, agent, rpm, render=args.show_play)
 
     print("开始正式训练...")
     episode = 0
     while episode < args.train_total_episode:
         # 训练
         for i in range(50):
-            train_reward = run_train_episode(env, agent, rpm, render=SHOW_PLAY)
+            train_reward = run_train_episode(env, agent, rpm, render=args.show_play)
             episode += 1
             logger.info('Episode: {} Reward: {}'.format(episode, train_reward))
 
         # 评估
-        evaluate_reward = run_evaluate_episode(env, agent, render=SHOW_PLAY)
+        evaluate_reward = run_evaluate_episode(env, agent, render=args.show_play)
         logger.info('Episode {}, Evaluate reward: {}'.format(episode, evaluate_reward))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_total_episode', type=int, default=int(1e4), help='maximum training episodes')
+    parser.add_argument('--show_play', type=bool, default=False, help='if show game play')
 
     args = parser.parse_args()
 

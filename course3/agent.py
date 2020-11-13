@@ -14,7 +14,7 @@ class Agent(parl.Agent):
         self.act_dim = act_dim
         super(Agent, self).__init__(algorithm)
 
-        # Attention: In the beginning, sync target model totally.
+        # 刚开始时就要完全同步目标模型
         self.alg.sync_target(decay=0)
 
     def build_program(self):
