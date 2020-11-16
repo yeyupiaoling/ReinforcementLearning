@@ -6,8 +6,8 @@ from collections import deque
 from paddle.fluid.param_attr import ParamAttr
 
 
-# 定义一个深度神经网络，通过指定参数名称，用于之后更新指定的网络参数
-def DQNetWork(ipt, variable_field):
+# 定义一个深度神经网络
+def Model(ipt, variable_field):
     fc1 = fluid.layers.fc(input=ipt,
                           size=24,
                           act='relu',
@@ -25,38 +25,36 @@ def DQNetWork(ipt, variable_field):
     return out
 
 
-# 定义输入数据
-state_data = fluid.data(name='state', shape=[None, 4], dtype='float32')
-action_data = fluid.data(name='action', shape=[None, 1], dtype='int64')
-reward_data = fluid.data(name='reward', shape=[None], dtype='float32')
-next_state_data = fluid.data(name='next_state', shape=[None, 4], dtype='float32')
-done_data = fluid.data(name='done', shape=[None], dtype='float32')
+def dqn():
+    # 定义输入数据
+    state_data = fluid.data(name='state', shape=[None, 4], dtype='float32')
+    action_data = fluid.data(name='action', shape=[None, 1], dtype='int64')
+    reward_data = fluid.data(name='reward', shape=[None], dtype='float32')
+    next_state_data = fluid.data(name='next_state', shape=[None, 4], dtype='float32')
+    done_data = fluid.data(name='done', shape=[None], dtype='float32')
 
-# 实例化一个游戏环境，参数为游戏名称
-env = gym.make("CartPole-v1")
-replay_buffer = deque(maxlen=10000)
+    # 获取策略网络
+    policyQ = Model(state_data, 'policy')
 
-# 获取策略网络
-policyQ = DQNetWork(state_data, 'policy')
+    # 克隆预测程序
+    predict_program = fluid.default_main_program().clone()
 
-# 克隆预测程序
-predict_program = fluid.default_main_program().clone()
+    action_onehot = fluid.layers.one_hot(action_data, 2)
+    action_value = fluid.layers.elementwise_mul(action_onehot, policyQ)
+    pred_action_value = fluid.layers.reduce_sum(action_value, dim=1)
 
-action_onehot = fluid.layers.one_hot(action_data, 2)
-action_value = fluid.layers.elementwise_mul(action_onehot, policyQ)
-pred_action_value = fluid.layers.reduce_sum(action_value, dim=1)
+    # 获取目标网络
+    targetQ = Model(next_state_data, 'target')
+    best_v = fluid.layers.reduce_max(targetQ, dim=1)
+    # 停止梯度更新
+    best_v.stop_gradient = True
+    gamma = 1.0
+    target = reward_data + gamma * best_v * (1.0 - done_data)
 
-# 获取目标网络
-targetQ = DQNetWork(next_state_data, 'target')
-best_v = fluid.layers.reduce_max(targetQ, dim=1)
-# 停止梯度更新
-best_v.stop_gradient = True
-gamma = 1.0
-target = reward_data + gamma * best_v * (1.0 - done_data)
-
-# 定义损失函数
-cost = fluid.layers.square_error_cost(pred_action_value, target)
-avg_cost = fluid.layers.reduce_mean(cost)
+    # 定义损失函数
+    cost = fluid.layers.square_error_cost(pred_action_value, target)
+    avg_cost = fluid.layers.reduce_mean(cost)
+    return predict_program, policyQ, avg_cost
 
 
 # 定义更新参数程序
@@ -81,12 +79,14 @@ def _build_sync_target_network():
     return sync_program
 
 
+# 获取DQN程序
+predict_program, policyQ, avg_cost = dqn()
+
 # 获取更新参数程序
 _sync_program = _build_sync_target_network()
 
 # 定义优化方法
-optimizer = fluid.optimizer.AdamOptimizer(learning_rate=1e-3,
-                                          epsilon=1e-3)
+optimizer = fluid.optimizer.Adam(learning_rate=1e-3, epsilon=1e-3)
 opt = optimizer.minimize(avg_cost)
 
 # 创建执行器并进行初始化
@@ -95,29 +95,26 @@ exe = fluid.Executor(place)
 exe.run(fluid.default_startup_program())
 
 # 定义训练的参数
-batch_size = 32
-num_episodes = 300
-num_exploration_episodes = 100
-max_len_episode = 1000
-initial_epsilon = 1.0
-final_epsilon = 0.01
-epsilon = initial_epsilon
+batch_size = 64  # batch大小
+num_episodes = 10000  # 训练次数
+e_greed = 0.1  # 探索初始概率
+e_greed_decrement = 1e-6  # 在训练过程中，降低探索的概率
 update_num = 0
 
-# 开始玩游戏
-for epsilon_id in range(num_episodes):
-    # 初始化环境，获得初始状态
+
+def run_train(env, replay_buffer):
+    global update_num, e_greed
+    total_reward = 0
+    # 重置游戏状态
     state = env.reset()
-    # 定义贪心策略
-    epsilon = max(initial_epsilon * (num_exploration_episodes - epsilon_id) /
-                  num_exploration_episodes, final_epsilon)
-    for t in range(max_len_episode):
+    while True:
         # 显示游戏界面
         env.render()
         state = np.expand_dims(state, axis=0)
-        # 贪心探索策略
-        if random.random() < epsilon:
-            # 以 epsilon 的概率选择随机下一步动作
+        # 定义探索策略
+        e_greed = max(0.01, e_greed - e_greed_decrement)
+        if np.random.rand() < e_greed:
+            # 以 e_greed 的概率选择随机下一步动作
             action = env.action_space.sample()
         else:
             # 使用模型预测作为结果下一步动作
@@ -130,15 +127,13 @@ for epsilon_id in range(num_episodes):
         # 让游戏执行动作，获得执行完 动作的下一个状态，动作的奖励，游戏是否已结束以及额外信息
         next_state, reward, done, info = env.step(action)
 
-        # 如果游戏结束，就进行惩罚
-        reward = -10 if done else reward
+        total_reward += reward
         # 记录游戏输出的结果，作为之后训练的数据
         replay_buffer.append((state, action, reward, next_state, done))
         state = next_state
 
         # 如果游戏结束，就重新玩游戏
         if done:
-            print('Pass:%d, epsilon:%f, score:%d' % (epsilon_id, epsilon, t))
             break
 
         # 如果收集的数据大于Batch的大小，就开始训练
@@ -163,4 +158,45 @@ for epsilon_id in range(num_episodes):
             if update_num % 200 == 0:
                 exe.run(program=_sync_program)
             update_num += 1
+
+    return total_reward
+
+
+# 评估模型
+def evaluate(env):
+    total_reward = 0
+    # 重置游戏状态
+    state = env.reset()
+    while True:
+        state = np.expand_dims(state, axis=0)
+        # 使用模型预测作为结果下一步动作
+        action = exe.run(predict_program,
+                         feed={'state': state.astype('float32')},
+                         fetch_list=[policyQ])[0]
+        action = np.squeeze(action, axis=0)
+        action = np.argmax(action)
+        next_state, reward, done, info = env.step(action)
+        state = next_state
+
+        total_reward += reward
+        if done:
+            break
+    return total_reward
+
+
+# 实例化一个游戏环境，参数为游戏名称
+env = gym.make("CartPole-v1")
+replay_buffer = deque(maxlen=10000)
+
+# 开始训练
+episode = 0
+while episode < num_episodes:
+    for t in range(50):
+        train_reward = run_train(env, replay_buffer)
+        episode += 1
+        print('Episode: {}, Reward: {:.2f}, e_greed: {:.2f}'.format(episode, train_reward, e_greed))
+
+    # 评估
+    eval_reward = evaluate(env)
+    print('episode:{}    test_reward:{}'.format(episode, eval_reward))
 env.close()
