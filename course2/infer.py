@@ -27,7 +27,7 @@ def main():
 
     # 创建模型
     model = Model(act_dim=action_dim)
-    algorithm = parl.algorithms.DQN(model, act_dim=action_dim)
+    algorithm = parl.algorithms.DQN(model, act_dim=action_dim, gamma=0.99, lr=0.0005)
     agent = Agent(algorithm=algorithm,
                   obs_dim=RESIZE_SHAPE,
                   act_dim=action_dim)

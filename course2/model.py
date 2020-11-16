@@ -4,15 +4,12 @@ from parl import layers
 
 class Model(parl.Model):
     def __init__(self, act_dim):
-        hid1_size = 128
-        hid2_size = 128
-
         self.conv1 = layers.conv2d(num_filters=32, filter_size=8, stride=4, padding=1, act='relu')
         self.conv2 = layers.conv2d(num_filters=64, filter_size=4, stride=2, padding=2, act='relu')
         self.conv3 = layers.conv2d(num_filters=64, filter_size=3, stride=1, padding=0, act='relu')
 
-        self.fc1 = layers.fc(size=hid1_size, act='relu')
-        self.fc2 = layers.fc(size=hid2_size, act='relu')
+        self.fc1 = layers.fc(size=128, act='relu')
+        self.fc2 = layers.fc(size=128, act='relu')
         self.fc3 = layers.fc(size=act_dim, act=None)
 
     def value(self, obs):

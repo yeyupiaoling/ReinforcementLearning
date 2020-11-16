@@ -71,7 +71,8 @@ def run_evaluate_episode(env, agent, render=False):
         obs = obs.transpose((2, 0, 1))
         obs = obs / 255.0
         action = agent.predict(obs.astype('float32'))
-        action = action_mapping(action, env.action_space.low[0], env.action_space.high[0])
+        # 将动作固定在0和1
+        action = [1 if a > 0 else 0 for a in action]
 
         next_obs, reward, terminal, info = env.step(action)
 
