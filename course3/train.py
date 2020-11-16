@@ -21,19 +21,23 @@ RESIZE_SHAPE = (1, 224, 224)  # 训练缩放的大小，减少模型计算，原
 
 
 # 图像预处理
-def preprocess(observation):
+def preprocess(observation, render=False):
     assert RESIZE_SHAPE[0] == 1 or RESIZE_SHAPE[0] == 3
     observation = cv2.resize(observation, (RESIZE_SHAPE[1], RESIZE_SHAPE[2]))
     if RESIZE_SHAPE[0] == 1:
         # 把图像转成灰度图
         observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
-        # 显示处理过的图像
-        cv2.imshow("preprocess", observation)
+        if render:
+            # 显示处理过的图像
+            cv2.imshow("preprocess", observation)
+            cv2.waitKey(1)
         observation = np.expand_dims(observation, axis=0)
     else:
         observation = cv2.cvtColor(observation, cv2.COLOR_RGB2BGR)
-        # 显示处理过的图像
-        cv2.imshow("preprocess", observation)
+        if render:
+            # 显示处理过的图像
+            cv2.imshow("preprocess", observation)
+            cv2.waitKey(1)
         observation = observation.transpose((2, 0, 1))
     observation = observation / 255.0
     return observation
@@ -41,7 +45,7 @@ def preprocess(observation):
 
 def run_train_episode(env, agent, rpm, render=False):
     obs = env.reset()
-    obs = preprocess(obs)
+    obs = preprocess(obs, render)
     total_reward = 0
     lives = 2
     while True:
@@ -56,8 +60,10 @@ def run_train_episode(env, agent, rpm, render=False):
         # 将动作固定在0和1
         action = [1 if a > 0 else 0 for a in action]
 
+        print(action)
+
         next_obs, reward, terminal, info = env.step(action)
-        next_obs = preprocess(next_obs)
+        next_obs = preprocess(next_obs, render)
 
         # 死一次就惩罚
         if info['lives'] < lives:
@@ -87,7 +93,7 @@ def run_evaluate_episode(env, agent, render=False):
         if render:
             # 显示视频图像
             env.render()
-        obs = preprocess(obs)
+        obs = preprocess(obs, render)
         action = agent.predict(obs.astype('float32'))
         # 将动作固定在0和1
         action = [1 if a > 0 else 0 for a in action]
