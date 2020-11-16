@@ -18,13 +18,13 @@ MEMORY_WARMUP_SIZE = 1e3  # 热身大小
 BATCH_SIZE = 128  # batch大小
 REWARD_SCALE = 0.1  # 奖励比例
 ENV_SEED = 1  # 固定随机情况
-RESIZE_SHAPE = (1, 224, 224)  # 训练缩放的大小，减少模型计算，原大小（224,240）
+RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小，减少模型计算，原大小（224,240）
 
 
 # 图像预处理
 def preprocess(observation, render=False):
     assert RESIZE_SHAPE[0] == 1 or RESIZE_SHAPE[0] == 3
-    observation = cv2.resize(observation, (RESIZE_SHAPE[1], RESIZE_SHAPE[2]))
+    observation = cv2.resize(observation, (RESIZE_SHAPE[2], RESIZE_SHAPE[1]))
     if RESIZE_SHAPE[0] == 1:
         # 把图像转成灰度图
         observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
@@ -57,7 +57,7 @@ def run_train_episode(env, agent, rpm, render=False):
         action = agent.predict(obs.astype('float32'))
 
         # 利用高斯分布添加噪声
-        action = np.random.normal(action, 1.0)
+        action = np.clip(np.random.normal(action, 1.0), -1.0, 1.0)
         # 将动作固定在0和1
         action = [1 if a > 0 else 0 for a in action]
 
@@ -150,7 +150,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_total_episode', type=int, default=int(1e4), help='maximum training episodes')
     parser.add_argument('--model_path', type=str, default='models/model.ckpt', help='save model path')
-    parser.add_argument('--show_play', type=bool, default=False, help='if show game play')
+    parser.add_argument('--show_play', type=bool, default=True, help='if show game play')
 
     args = parser.parse_args()
 

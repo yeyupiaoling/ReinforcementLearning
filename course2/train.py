@@ -31,6 +31,7 @@ def preprocess(observation):
     ret, observation = cv2.threshold(observation, 1, 255, cv2.THRESH_BINARY)
     # 显示处理过的图像
     cv2.imshow("preprocess", observation)
+    cv2.waitKey(1)
     observation = np.expand_dims(observation, axis=0)
     observation = observation / 255.0
     return observation
