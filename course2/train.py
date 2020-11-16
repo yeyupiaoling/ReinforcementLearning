@@ -36,7 +36,7 @@ def preprocess(observation):
     return observation
 
 
-def run_episode(agent, env, rpm):
+def run_train(agent, env, rpm):
     total_reward = 0
     obs = env.reset()
     obs = preprocess(obs)
@@ -100,7 +100,7 @@ def main():
     # 预热
     print("开始预热...")
     while len(rpm) < MEMORY_WARMUP_SIZE:
-        run_episode(agent, env, rpm)
+        run_train(agent, env, rpm)
 
     # 开始训练
     print("开始正式训练...")
@@ -108,7 +108,7 @@ def main():
     while episode < MAX_EPISODE:
         # 训练
         for i in range(50):
-            train_reward = run_episode(agent, env, rpm)
+            train_reward = run_train(agent, env, rpm)
             episode += 1
             logger.info('Episode: {}, Reward: {:.2f}, e_greed: {:.2f}'.format(episode, train_reward, agent.e_greed))
 

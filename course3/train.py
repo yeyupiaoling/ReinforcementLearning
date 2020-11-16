@@ -1,10 +1,11 @@
 import argparse
+import cv2
 import retro
 import numpy as np
 import parl
 from agent import Agent
 from model import Model
-from parl.utils import logger, action_mapping
+from parl.utils import logger
 from replay_memory import ReplayMemory
 
 ACTOR_LR = 1e-4  # actor模型的学习率
@@ -16,12 +17,31 @@ MEMORY_WARMUP_SIZE = 1e3  # 热身大小
 BATCH_SIZE = 128  # batch大小
 REWARD_SCALE = 0.1  # 奖励比例
 ENV_SEED = 1  # 固定随机情况
+RESIZE_SHAPE = (1, 224, 224)  # 训练缩放的大小，减少模型计算，原大小（224,240）
+
+
+# 图像预处理
+def preprocess(observation):
+    assert RESIZE_SHAPE[0] == 1 or RESIZE_SHAPE[0] == 3
+    observation = cv2.resize(observation, (RESIZE_SHAPE[1], RESIZE_SHAPE[2]))
+    if RESIZE_SHAPE[0] == 1:
+        # 把图像转成灰度图
+        observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
+        # 显示处理过的图像
+        cv2.imshow("preprocess", observation)
+        observation = np.expand_dims(observation, axis=0)
+    else:
+        observation = cv2.cvtColor(observation, cv2.COLOR_RGB2BGR)
+        # 显示处理过的图像
+        cv2.imshow("preprocess", observation)
+        observation = observation.transpose((2, 0, 1))
+    observation = observation / 255.0
+    return observation
 
 
 def run_train_episode(env, agent, rpm, render=False):
     obs = env.reset()
-    obs = obs.transpose((2, 0, 1))
-    obs = obs / 255.0
+    obs = preprocess(obs)
     total_reward = 0
     lives = 2
     while True:
@@ -37,8 +57,7 @@ def run_train_episode(env, agent, rpm, render=False):
         action = [1 if a > 0 else 0 for a in action]
 
         next_obs, reward, terminal, info = env.step(action)
-        next_obs = next_obs.transpose((2, 0, 1))
-        next_obs = next_obs / 255.0
+        next_obs = preprocess(next_obs)
 
         # 死一次就惩罚
         if info['lives'] < lives:
@@ -68,8 +87,7 @@ def run_evaluate_episode(env, agent, render=False):
         if render:
             # 显示视频图像
             env.render()
-        obs = obs.transpose((2, 0, 1))
-        obs = obs / 255.0
+        obs = preprocess(obs)
         action = agent.predict(obs.astype('float32'))
         # 将动作固定在0和1
         action = [1 if a > 0 else 0 for a in action]
@@ -90,7 +108,7 @@ def main():
     env.seed(ENV_SEED)
 
     # 游戏的图像形状和动作形状
-    obs_dim = (env.observation_space.shape[2], env.observation_space.shape[0], env.observation_space.shape[1])
+    obs_dim = RESIZE_SHAPE
     act_dim = env.action_space.shape[0]
 
     # 创建模型
@@ -121,7 +139,7 @@ def main():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_total_episode', type=int, default=int(1e4), help='maximum training episodes')
-    parser.add_argument('--show_play', type=bool, default=False, help='if show game play')
+    parser.add_argument('--show_play', type=bool, default=True, help='if show game play')
 
     args = parser.parse_args()
 
