@@ -4,6 +4,7 @@ from parl import layers
 
 class Model(parl.Model):
     def __init__(self, act_dim):
+        super().__init__()
         self.fc1 = layers.fc(size=128, act='relu')
         self.fc2 = layers.fc(size=128, act='relu')
         self.fc3 = layers.fc(size=act_dim, act=None)

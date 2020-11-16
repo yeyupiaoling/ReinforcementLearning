@@ -1,4 +1,5 @@
 import argparse
+import os
 import cv2
 import retro
 import numpy as np
@@ -59,8 +60,6 @@ def run_train_episode(env, agent, rpm, render=False):
         action = np.random.normal(action, 1.0)
         # 将动作固定在0和1
         action = [1 if a > 0 else 0 for a in action]
-
-        print(action)
 
         next_obs, reward, terminal, info = env.step(action)
         next_obs = preprocess(next_obs, render)
@@ -141,11 +140,17 @@ def main():
         evaluate_reward = run_evaluate_episode(env, agent, render=args.show_play)
         logger.info('Episode {}, Evaluate reward: {}'.format(episode, evaluate_reward))
 
+        # 保存模型
+        if not os.path.exists(os.path.dirname(args.model_path)):
+            os.makedirs(os.path.dirname(args.model_path))
+        agent.save(args.model_path)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_total_episode', type=int, default=int(1e4), help='maximum training episodes')
-    parser.add_argument('--show_play', type=bool, default=True, help='if show game play')
+    parser.add_argument('--model_path', type=str, default='models/model.ckpt', help='save model path')
+    parser.add_argument('--show_play', type=bool, default=False, help='if show game play')
 
     args = parser.parse_args()
 

@@ -62,7 +62,7 @@ def evaluate(agent, env):
 
 def main():
     # 实例化一个游戏环境，参数为游戏名称
-    env = gym.make('CartPole-v0')
+    env = gym.make('CartPole-v1')
 
     # 图像输入形状和动作维度
     action_dim = env.action_space.n
