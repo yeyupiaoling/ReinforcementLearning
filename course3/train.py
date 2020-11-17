@@ -6,7 +6,7 @@ import numpy as np
 import parl
 from agent import Agent
 from model import Model
-from parl.utils import logger
+from parl.utils import logger, action_mapping
 from replay_memory import ReplayMemory
 
 ACTOR_LR = 1e-4  # actor模型的学习率
@@ -58,16 +58,23 @@ def run_train_episode(env, agent, rpm, render=False):
 
         # 利用高斯分布添加噪声
         action = np.clip(np.random.normal(action, 1.0), -1.0, 1.0)
-        # 将动作固定在0和1
-        action = [1 if a > 0 else 0 for a in action]
+        # 获取动作，把结果固定输出在(0, 2)，取整就得到了动作
+        action = [int(a) for a in action_mapping(action, 0 + 1e-9, 2 - 1e-9)]
 
-        next_obs, reward, terminal, info = env.step(action)
+        # 把动作标签转换为实际的游戏动作
+        a = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        a[0] = action[0]
+        a[-3] = action[-3]
+        a[-2] = action[-2]
+        a[-1] = action[-1]
+        next_obs, reward, terminal, info = env.step(a)
         next_obs = preprocess(next_obs, render)
 
         # 死一次就惩罚
         if info['lives'] < lives:
-            reward = -10
-            lives = info['lives']
+            # reward = -10
+            # lives = info['lives']
+            terminal = True
 
         rpm.append(obs, action, REWARD_SCALE * reward, next_obs, terminal)
 
@@ -94,10 +101,16 @@ def run_evaluate_episode(env, agent, render=False):
             env.render()
         obs = preprocess(obs, render)
         action = agent.predict(obs.astype('float32'))
-        # 将动作固定在0和1
-        action = [1 if a > 0 else 0 for a in action]
+        # 获取动作
+        action = [int(a) for a in action_mapping(action, 0 + 1e-9, 2 - 1e-9)]
 
-        next_obs, reward, terminal, info = env.step(action)
+        # 把动作标签转换为实际的游戏动作
+        a = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        a[0] = action[0]
+        a[-3] = action[-3]
+        a[-2] = action[-2]
+        a[-1] = action[-1]
+        next_obs, reward, terminal, info = env.step(a)
 
         obs = next_obs
         total_reward += reward
@@ -112,16 +125,17 @@ def main():
     env = retro.make(game='SnowBrothers-Nes')
     env.seed(ENV_SEED)
 
-    # 游戏的图像形状和动作形状
+    # 游戏的图像形状
     obs_dim = RESIZE_SHAPE
-    act_dim = env.action_space.shape[0]
+    # 动作维度，要减去没用的动作，减少模型输出
+    action_dim = env.action_space.shape[0] - 5
 
     # 创建模型
-    model = Model(act_dim)
+    model = Model(action_dim)
     algorithm = parl.algorithms.DDPG(model, gamma=GAMMA, tau=TAU, actor_lr=ACTOR_LR, critic_lr=CRITIC_LR)
-    agent = Agent(algorithm, obs_dim, act_dim)
+    agent = Agent(algorithm, obs_dim, action_dim)
 
-    rpm = ReplayMemory(MEMORY_SIZE, obs_dim, act_dim)
+    rpm = ReplayMemory(MEMORY_SIZE, obs_dim, action_dim)
 
     print("开始预热...")
     while rpm.size() < MEMORY_WARMUP_SIZE:
