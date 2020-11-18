@@ -15,7 +15,7 @@ GAMMA = 0.99  # 奖励系数
 TAU = 0.001  # 衰减参数
 MEMORY_SIZE = int(1e4)  # 内存记忆
 MEMORY_WARMUP_SIZE = 1e3  # 热身大小
-BATCH_SIZE = 128  # batch大小
+BATCH_SIZE = 32  # batch大小
 REWARD_SCALE = 0.1  # 奖励比例
 ENV_SEED = 1  # 固定随机情况
 RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小，减少模型计算，原大小（224,240）
@@ -59,7 +59,7 @@ def run_train_episode(env, agent, rpm, render=False):
         # 利用高斯分布添加噪声
         action = np.clip(np.random.normal(action, 1.0), -1.0, 1.0)
         # 获取动作，把结果固定输出在(0, 2)，取整就得到了动作
-        action = [int(a) for a in action_mapping(action, 0 + 1e-9, 2 - 1e-9)]
+        action = [int(a + 1 - 1e-4) for a in action_mapping(action, -1.0, 1.0)]
 
         # 把动作标签转换为实际的游戏动作
         a = [0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -70,10 +70,8 @@ def run_train_episode(env, agent, rpm, render=False):
         next_obs, reward, terminal, info = env.step(a)
         next_obs = preprocess(next_obs, render)
 
-        # 死一次就惩罚
+        # 死一次就直接结束
         if info['lives'] < lives:
-            # reward = -10
-            # lives = info['lives']
             terminal = True
 
         rpm.append(obs, action, REWARD_SCALE * reward, next_obs, terminal)
