@@ -2,5 +2,6 @@
 __pycache__/
 *.py[cod]
 roms/
+temp/models/
 course2/models/
 course3/models/
