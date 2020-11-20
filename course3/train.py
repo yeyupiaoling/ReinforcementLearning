@@ -13,7 +13,7 @@ ACTOR_LR = 1e-4  # actor模型的学习率
 CRITIC_LR = 1e-3  # critic模型的学习速率
 GAMMA = 0.99  # 奖励系数
 TAU = 0.001  # 衰减参数
-MEMORY_SIZE = int(1e4)  # 内存记忆
+MEMORY_SIZE = int(1e4)  # 内存记忆大小
 MEMORY_WARMUP_SIZE = 1e3  # 热身大小
 BATCH_SIZE = 32  # batch大小
 REWARD_SCALE = 0.1  # 奖励比例
@@ -44,6 +44,7 @@ def preprocess(observation, render=False):
     return observation
 
 
+# 训练模型
 def run_train_episode(env, agent, rpm, render=False):
     obs = env.reset()
     obs = preprocess(obs, render)
@@ -133,6 +134,7 @@ def main():
     algorithm = parl.algorithms.DDPG(model, gamma=GAMMA, tau=TAU, actor_lr=ACTOR_LR, critic_lr=CRITIC_LR)
     agent = Agent(algorithm, obs_dim, action_dim)
 
+    # 创建记录数据存储器
     rpm = ReplayMemory(MEMORY_SIZE, obs_dim, action_dim)
 
     print("开始预热...")
