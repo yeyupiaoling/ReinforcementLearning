@@ -3,7 +3,7 @@ from itertools import cycle
 import numpy as np
 import cv2
 
-from game import flappy_bird_utils
+from flappy_bird import flappy_bird_utils
 import pygame
 
 FPS = 30

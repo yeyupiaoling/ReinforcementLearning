@@ -17,6 +17,7 @@ class Agent(parl.Agent):
         # 刚开始时就要完全同步目标模型
         self.alg.sync_target(decay=0)
 
+    # 创建PaddlePaddle程序
     def build_program(self):
         self.pred_program = fluid.Program()
         self.learn_program = fluid.Program()
@@ -33,20 +34,33 @@ class Agent(parl.Agent):
             terminal = layers.data(name='terminal', shape=[], dtype='bool')
             _, self.critic_cost = self.alg.learn(obs, action, reward, next_obs, terminal)
 
+    # 预测动作
     def predict(self, obs):
         obs = np.expand_dims(obs, axis=0)
-        act = self.fluid_executor.run(program=self.pred_program,
-                                      feed={'obs': obs},
-                                      fetch_list=[self.pred_act])[0]
-        act = np.squeeze(act)
-        return act
+        logits = self.fluid_executor.run(program=self.pred_program,
+                                         feed={'obs': obs.astype('float32')},
+                                         fetch_list=[self.pred_act])
+        logits = np.squeeze(logits)
+        policy = self.softmax(logits)
+        return policy
 
+    # Fluid版本不支持动态计算，只能自定义一个softmax
+    def softmax(self, x):
+        x_row_max = x.max(axis=-1)
+        x_row_max = x_row_max.reshape(list(x.shape)[:-1] + [1])
+        x = x - x_row_max
+        x_exp = np.exp(x)
+        x_exp_row_sum = x_exp.sum(axis=-1).reshape(list(x.shape)[:-1] + [1])
+        softmax = x_exp / x_exp_row_sum
+        return softmax
+
+    # 执行模型学习
     def learn(self, obs, action, reward, next_obs, terminal):
         feed = {
-            'obs': obs,
+            'obs': obs.astype('float32'),
             'action': action,
             'reward': reward,
-            'next_obs': next_obs,
+            'next_obs': next_obs.astype('float32'),
             'terminal': terminal
         }
         critic_cost = self.fluid_executor.run(program=self.learn_program,

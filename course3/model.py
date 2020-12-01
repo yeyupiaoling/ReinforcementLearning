@@ -3,8 +3,8 @@ from parl import layers
 
 
 class Model(parl.Model):
-    def __init__(self, act_dim):
-        self.actor_model = ActorModel(act_dim)
+    def __init__(self, action_dim):
+        self.actor_model = ActorModel(action_dim)
         self.critic_model = CriticModel()
 
     def policy(self, obs):
@@ -18,7 +18,7 @@ class Model(parl.Model):
 
 
 class ActorModel(parl.Model):
-    def __init__(self, act_dim):
+    def __init__(self, action_dim):
         super().__init__()
         self.conv1 = layers.conv2d(num_filters=32, filter_size=3, stride=1, padding=1, act='relu')
         self.conv2 = layers.conv2d(num_filters=32, filter_size=3, stride=1, padding=1, act='relu')
@@ -26,7 +26,7 @@ class ActorModel(parl.Model):
         self.conv4 = layers.conv2d(num_filters=32, filter_size=3, stride=1, padding=1, act='relu')
         self.fc1 = layers.fc(size=512, act='relu')
         self.fc2 = layers.fc(size=512, act='relu')
-        self.fc3 = layers.fc(size=act_dim, act='tanh')
+        self.fc3 = layers.fc(size=action_dim, act=None)
 
     def policy(self, obs):
         conv1 = self.conv1(obs)

@@ -1,4 +1,4 @@
-import game.wrapped_flappy_bird as flappyBird
+import flappy_bird.wrapped_flappy_bird as flappyBird
 import random
 
 

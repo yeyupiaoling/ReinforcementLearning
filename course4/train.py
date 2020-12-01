@@ -102,7 +102,8 @@ def run_evaluate_episode(env, agent, render=False):
         # 预测动作
         action = agent.predict(obs)
         action = np.squeeze(action)
-        # 获取动作，把结果固定输出在(0, 2)，取整就得到了动作
+        # 获取动作，把结果固定输出在(-1, 1)，取整就得到了动作
+        action = np.clip(action, -1.0, 1.0)
         action = [int(a - 1e-4) for a in action]
         # 执行游戏
         next_obs, reward, isOver, info = env.step(action)
