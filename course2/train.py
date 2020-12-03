@@ -11,18 +11,20 @@ from replay_memory import ReplayMemory
 LEARN_FREQ = 5  # 更新参数步数
 MEMORY_SIZE = 20000  # 内存记忆
 MEMORY_WARMUP_SIZE = 200  # 热身大小
-BATCH_SIZE = 64  # batch大小
+BATCH_SIZE = 32  # batch大小
 LEARNING_RATE = 0.0005  # 学习率大小
 GAMMA = 0.99  # 奖励系数
 E_GREED = 0.1  # 探索初始概率
 E_GREED_DECREMENT = 1e-6  # 在训练过程中，降低探索的概率
 MAX_EPISODE = 10000  # 训练次数
-RESIZE_SHAPE = (1, 224, 224)  # 训练缩放的大小，减少模型计算，原大小（288, 512）
+RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小，减少模型计算，原大小（288, 512）
 SAVE_MODEL_PATH = "models/model.ckpt"  # 保存模型路径
 
 
 # 图像预处理
 def preprocess(observation):
+    # 裁剪图像
+    observation = observation[:observation.shape[0]-100, :]
     # 缩放图像
     observation = cv2.resize(observation, (RESIZE_SHAPE[1], RESIZE_SHAPE[2]))
     # 把图像转成灰度图

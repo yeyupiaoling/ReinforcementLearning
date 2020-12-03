@@ -48,6 +48,7 @@ class Agent(parl.Agent):
         act = self.fluid_executor.run(program=self.sample_program,
                                       feed={'obs': obs.astype('float32')},
                                       fetch_list=[self.sample_act])[0]
+        act = np.squeeze(act)
         return act
 
     def learn(self, obs, act, reward, next_obs, terminal):
