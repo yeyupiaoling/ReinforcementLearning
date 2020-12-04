@@ -3,13 +3,14 @@ from collections import defaultdict
 import cv2
 import numpy
 import retro
+import retrowrapper
 import numpy as np
 import parl
 from parl.env.vector_env import VectorEnv
 from parl.utils.rl_utils import calc_gae
 
-from atari_agent import AtariAgent
-from atari_model import AtariModel
+from agent import Agent
+from model import Model
 
 
 @parl.remote_class
@@ -19,11 +20,11 @@ class Actor(object):
 
         self.envs = []
         for _ in range(config['env_num']):
-            env = retro.RetroEnv(game=config['env_name'],
-                                 state=retro.State.DEFAULT,
-                                 use_restricted_actions=retro.Actions.DISCRETE,
-                                 players=1,
-                                 obs_type=retro.Observations.IMAGE)
+            env = retrowrapper.RetroWrapper(game=config['env_name'],
+                                            state=retro.State.DEFAULT,
+                                            use_restricted_actions=retro.Actions.DISCRETE,
+                                            players=1,
+                                            obs_type=retro.Observations.IMAGE)
             self.envs.append(env)
         self.vector_env = VectorEnv(self.envs)
 
@@ -34,13 +35,9 @@ class Actor(object):
             temp.append(obs)
         self.obs_batch = temp
 
-        act_dim = env.action_space.n
-
-        self.config['act_dim'] = act_dim
-
-        model = AtariModel(act_dim)
+        model = Model(self.config['act_dim'])
         algorithm = parl.algorithms.A3C(model, vf_loss_coeff=config['vf_loss_coeff'])
-        self.agent = AtariAgent(algorithm, config)
+        self.agent = Agent(algorithm, config)
 
     # 改变游戏的布局环境，减低输入图像的复杂度
     def change_obs_color(self, obs, src, target):
@@ -75,9 +72,11 @@ class Actor(object):
         for env_id in range(self.config['env_num']):
             env_sample_data[env_id] = defaultdict(list)
 
+        total_reward = 0
         for i in range(self.config['sample_batch_steps']):
             actions_batch, values_batch = self.agent.sample(np.stack(self.obs_batch))
             next_obs_batch, reward_batch, done_batch, info_batch = self.vector_env.step(actions_batch)
+            total_reward = total_reward + sum(reward_batch)
 
             temp = []
             for o in next_obs_batch:
@@ -112,6 +111,7 @@ class Actor(object):
                     env_sample_data[env_id] = defaultdict(list)
 
             self.obs_batch = next_obs_batch
+        print("当前得分：", total_reward)
 
         # size of sample_data: env_num * sample_batch_steps
         for key in sample_data:

@@ -2,7 +2,7 @@ import parl
 from parl import layers
 
 
-class AtariModel(parl.Model):
+class Model(parl.Model):
     def __init__(self, act_dim):
         self.conv1 = layers.conv2d(num_filters=32, filter_size=8, stride=4, padding=1, act='relu')
         self.conv2 = layers.conv2d(num_filters=64, filter_size=4, stride=2, padding=2, act='relu')

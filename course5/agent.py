@@ -5,7 +5,7 @@ from parl import layers
 from parl.utils.scheduler import PiecewiseScheduler, LinearDecayScheduler
 
 
-class AtariAgent(parl.Agent):
+class Agent(parl.Agent):
     def __init__(self, algorithm, config):
         """
 
@@ -15,7 +15,7 @@ class AtariAgent(parl.Agent):
         """
 
         self.obs_shape = config['obs_shape']
-        super(AtariAgent, self).__init__(algorithm)
+        super(Agent, self).__init__(algorithm)
 
         self.lr_scheduler = LinearDecayScheduler(config['start_lr'], config['max_sample_steps'])
 

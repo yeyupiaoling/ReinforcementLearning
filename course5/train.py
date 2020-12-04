@@ -12,8 +12,8 @@ from parl.utils.time_stat import TimeStat
 from parl.utils.window_stat import WindowStat
 
 from actor import Actor
-from atari_agent import AtariAgent
-from atari_model import AtariModel
+from agent import Agent
+from model import Model
 
 
 class Learner(object):
@@ -29,9 +29,9 @@ class Learner(object):
         act_dim = env.action_space.n
         self.config['act_dim'] = act_dim
 
-        model = AtariModel(act_dim)
+        model = Model(act_dim)
         algorithm = parl.algorithms.A3C(model, vf_loss_coeff=config['vf_loss_coeff'])
-        self.agent = AtariAgent(algorithm, config)
+        self.agent = Agent(algorithm, config)
 
         if machine_info.is_gpu_available():
             assert get_gpu_count() == 1, 'Only support training in single GPU,\

@@ -1,7 +1,7 @@
 config = {
 
     # ==========  remote config ==========
-    'master_address': '192.168.88.53:8010',
+    'master_address': 'localhost:8010',
 
     # ==========  env config ==========
     'env_name': 'SnowBrothers-Nes',
