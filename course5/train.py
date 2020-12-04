@@ -13,6 +13,7 @@ from parl.utils.window_stat import WindowStat
 
 from actor import Actor
 from agent import Agent
+from config import config
 from model import Model
 
 
@@ -150,8 +151,6 @@ class Learner(object):
 
 
 if __name__ == '__main__':
-    from config import config
-
     learner = Learner(config)
     assert config['log_metrics_interval_s'] > 0
 
@@ -165,4 +164,3 @@ if __name__ == '__main__':
         if time.time() - start1 > config['save_model_interval_s']:
             start1 = time.time()
             learner.save_model()
-

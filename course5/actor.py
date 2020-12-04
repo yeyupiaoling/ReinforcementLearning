@@ -2,13 +2,13 @@ from collections import defaultdict
 
 import cv2
 import numpy
-import retro
-import retrowrapper
 import numpy as np
 import parl
+import retro
 from parl.env.vector_env import VectorEnv
 from parl.utils.rl_utils import calc_gae
 
+import retrowrapper
 from agent import Agent
 from model import Model
 
