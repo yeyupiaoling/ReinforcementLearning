@@ -1,3 +1,4 @@
+import os
 import queue
 import threading
 import time
@@ -6,8 +7,7 @@ from collections import defaultdict
 import numpy as np
 import parl
 import retro
-from parl.utils import logger, get_gpu_count
-from parl.utils import machine_info
+from parl.utils import logger, summary
 from parl.utils.time_stat import TimeStat
 from parl.utils.window_stat import WindowStat
 
@@ -32,10 +32,6 @@ class Learner(object):
         model = Model(act_dim)
         algorithm = parl.algorithms.A3C(model, vf_loss_coeff=config['vf_loss_coeff'])
         self.agent = Agent(algorithm, config)
-
-        if machine_info.is_gpu_available():
-            assert get_gpu_count() == 1, 'Only support training in single GPU,\
-                    Please set environment variable: `export CUDA_VISIBLE_DEVICES=[GPU_ID_TO_USE]` .'
 
         # ========== Learner ==========
         self.total_loss_stat = WindowStat(100)
@@ -119,14 +115,35 @@ class Learner(object):
                 advantages_np=train_batch['advantages'],
                 target_values_np=train_batch['target_values'])
 
-            logger.info('total_loss: {}'.format(total_loss))
-
         self.total_loss_stat.add(total_loss)
         self.pi_loss_stat.add(pi_loss)
         self.vf_loss_stat.add(vf_loss)
         self.entropy_stat.add(entropy)
         self.lr = lr
         self.entropy_coeff = entropy_coeff
+
+    def log_metrics(self):
+        """ Log metrics of learner and actors
+        """
+        if self.start_time is None:
+            return
+
+        summary.add_scalar('total_loss', self.total_loss_stat.mean, self.sample_total_steps)
+        summary.add_scalar('pi_loss', self.pi_loss_stat.mean, self.sample_total_steps)
+        summary.add_scalar('vf_loss', self.vf_loss_stat.mean, self.sample_total_steps)
+        summary.add_scalar('entropy', self.entropy_stat.mean, self.sample_total_steps)
+        summary.add_scalar('lr', self.lr, self.sample_total_steps)
+        summary.add_scalar('entropy_coeff', self.entropy_coeff, self.sample_total_steps)
+        logger.info('total_loss: {}'.format(self.total_loss_stat.mean))
+
+    # 保存模型
+    def save_model(self):
+        if self.start_time is None:
+            return
+
+        if not os.path.exists(os.path.dirname(self.config['model_path'])):
+            os.makedirs(os.path.dirname(self.config['model_path']))
+        self.agent.save(self.config['model_path'])
 
     def should_stop(self):
         return self.sample_total_steps >= self.config['max_sample_steps']
@@ -138,7 +155,14 @@ if __name__ == '__main__':
     learner = Learner(config)
     assert config['log_metrics_interval_s'] > 0
 
+    start1 = time.time()
     while not learner.should_stop():
         start = time.time()
         while time.time() - start < config['log_metrics_interval_s']:
             learner.step()
+        learner.log_metrics()
+        # 保存模型
+        if time.time() - start1 > config['save_model_interval_s']:
+            start1 = time.time()
+            learner.save_model()
+

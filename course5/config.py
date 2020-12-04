@@ -19,10 +19,11 @@ config = {
 
     # start learning rate
     'start_lr': 0.001,
+    'model_path': 'models/model.ckpt',
 
     # coefficient of policy entropy adjustment schedule: (train_step, coefficient)
     'entropy_coeff_scheduler': [(0, -0.01)],
     'vf_loss_coeff': 0.5,
-    'get_remote_metrics_interval': 10,
     'log_metrics_interval_s': 10,
+    'save_model_interval_s': 60 * 60 * 3,
 }
