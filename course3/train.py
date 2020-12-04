@@ -74,7 +74,6 @@ def run_train_episode(env, agent, rpm, render=False):
     obs = env.reset()
     obs = preprocess(obs, render)
     total_reward = 0
-    lives = 2
     while True:
         if render:
             # 显示视频图像
@@ -87,7 +86,7 @@ def run_train_episode(env, agent, rpm, render=False):
         next_obs = preprocess(next_obs, render)
 
         # 死一次就直接结束
-        if info['lives'] < lives:
+        if info['lives'] != 2:
             terminal = True
 
         rpm.append(obs, action, REWARD_SCALE * reward, next_obs, terminal)
@@ -139,7 +138,7 @@ def main():
 
     # 游戏的图像形状
     obs_dim = RESIZE_SHAPE
-    # 动作维度，要减去没用的动作，减少模型输出
+    # 动作维度
     action_dim = env.action_space.n
 
     # 创建模型
