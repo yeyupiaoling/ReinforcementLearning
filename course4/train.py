@@ -133,8 +133,8 @@ def main():
 
     # 游戏的图像形状
     obs_dim = RESIZE_SHAPE
-    # 动作维度，要减去没用的动作，减少模型输出
-    action_dim = env.action_space.shape[0]
+    # 动作维度
+    action_dim = env.action_space.n
     # 动作正负的最大绝对值
     max_action = 1
 
@@ -181,7 +181,7 @@ if __name__ == '__main__':
                         help='Nes environment name')
     parser.add_argument('--train_total_steps',
                         type=int,
-                        default=int(1e6),
+                        default=int(1e7),
                         help='maximum training steps')
     parser.add_argument('--show_play',
                         type=bool,

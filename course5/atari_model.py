@@ -21,7 +21,6 @@ class AtariModel(parl.Model):
         Returns:
             policy_logits: B * ACT_DIM
         """
-        obs = obs / 255.0
         conv1 = self.conv1(obs)
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
@@ -40,7 +39,6 @@ class AtariModel(parl.Model):
         Returns:
             values: B
         """
-        obs = obs / 255.0
         conv1 = self.conv1(obs)
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
@@ -61,7 +59,6 @@ class AtariModel(parl.Model):
             policy_logits: B * ACT_DIM
             values: B
         """
-        obs = obs / 255.0
         conv1 = self.conv1(obs)
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
