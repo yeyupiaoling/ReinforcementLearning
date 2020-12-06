@@ -17,7 +17,7 @@ def main():
     print(obs.shape)
     w, h, c = obs.shape
 
-    for i in range(100000):
+    while True:
         # 把图像转成灰度图
         obs = cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
         obs = obs[25:h, 15:w]
