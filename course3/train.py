@@ -20,46 +20,9 @@ ENV_SEED = 1  # 固定随机情况
 RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小，减少模型计算，原大小（224,240）
 
 
-# 改变游戏的布局环境，减低输入图像的复杂度
-def change_obs_color(obs, src, target):
-    for i in range(len(src)):
-        index = (obs == src[i])
-        obs[index] = target[i]
-    return obs
-
-
-# 图像预处理
-def preprocess(observation, render=False):
-    assert RESIZE_SHAPE[0] == 1 or RESIZE_SHAPE[0] == 3
-    w, h, c = observation.shape
-    observation = observation[25:h, 15:w]
-    if RESIZE_SHAPE[0] == 1:
-        # 把图像转成灰度图
-        observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
-        # 把其他的亮度调成一种，减低图像的复杂度
-        observation = change_obs_color(observation, [66, 88, 114, 186, 189, 250], [255, 255, 255, 255, 255, 0])
-        observation = cv2.resize(observation, (RESIZE_SHAPE[2], RESIZE_SHAPE[1]))
-        if render:
-            # 显示处理过的图像
-            cv2.imshow("preprocess", observation)
-            cv2.waitKey(1)
-        observation = np.expand_dims(observation, axis=0)
-    else:
-        observation = cv2.resize(observation, (RESIZE_SHAPE[2], RESIZE_SHAPE[1]))
-        observation = cv2.cvtColor(observation, cv2.COLOR_RGB2BGR)
-        if render:
-            # 显示处理过的图像
-            cv2.imshow("preprocess", observation)
-            cv2.waitKey(1)
-        observation = observation.transpose((2, 0, 1))
-    observation = observation / 255.0
-    return observation
-
-
 # 训练模型
 def run_train_episode(env, agent, rpm, render=False):
     obs = env.reset()
-    obs = preprocess(obs, render)
     total_reward = 0
     steps = 0
     lives = 2
@@ -79,7 +42,6 @@ def run_train_episode(env, agent, rpm, render=False):
 
         # 执行游戏
         next_obs, reward, isOver, info = env.step(action)
-        next_obs = preprocess(next_obs, render)
 
         # 死一次就直接结束
         if info['lives'] < lives:
@@ -109,7 +71,6 @@ def run_evaluate_episode(env, agent, render=False):
         if render:
             # 显示视频图像
             env.render()
-        obs = preprocess(obs, render)
         # 预测动作
         action = agent.predict(obs)
         action = np.squeeze(action)
@@ -128,11 +89,14 @@ def run_evaluate_episode(env, agent, render=False):
 
 def main():
     # 初始化游戏
-    env = retro.make(game=args.env)
+    env = retro_util.RetroEnv(game='SnowBrothers-Nes',
+                              skill_frame=1,
+                              resize_shape=RESIZE_SHAPE,
+                              render_preprocess=True)
     env.seed(ENV_SEED)
 
     # 游戏的图像形状
-    obs_dim = RESIZE_SHAPE
+    obs_dim = env.observation_space.shape
     # 动作维度
     action_dim = env.action_space.n
     # 动作正负的最大绝对值
