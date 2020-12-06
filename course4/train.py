@@ -153,7 +153,7 @@ def main():
     # 创建记录数据存储器
     rpm = ReplayMemory(MEMORY_SIZE, obs_dim, action_dim)
 
-    total_steps = 0
+    total_steps = 0 
     while total_steps < args.train_total_steps:
         # 训练
         train_reward, steps = run_train_episode(env, agent, rpm, render=args.show_play)

@@ -37,6 +37,7 @@ def _retrocom(rx, tx, game, kwargs):
             tx.put(result)
 
 
+# 使用这个可以创建多个retro游戏
 class RetroWrapper():
     """
     This class is a thin wrapper around a retro environment.

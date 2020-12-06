@@ -16,10 +16,10 @@ class Model(parl.Model):
     def policy(self, obs):
         """
         Args:
-            obs: A float32 tensor of shape [B, C, H, W]
+            obs: 输入的图像，shape为[N, C, H, W]
 
         Returns:
-            policy_logits: B * ACT_DIM
+            policy_logits: N * ACTION_DIM
         """
         conv1 = self.conv1(obs)
         conv2 = self.conv2(conv1)
@@ -34,10 +34,10 @@ class Model(parl.Model):
     def value(self, obs):
         """
         Args:
-            obs: A float32 tensor of shape [B, C, H, W]
+            obs: 输入的图像，shape为[N, C, H, W]
 
         Returns:
-            values: B
+            values: N
         """
         conv1 = self.conv1(obs)
         conv2 = self.conv2(conv1)
@@ -53,11 +53,11 @@ class Model(parl.Model):
     def policy_and_value(self, obs):
         """
         Args:
-            obs: A float32 tensor of shape [B, C, H, W]
+            obs: 输入的图像，shape为[N, C, H, W]
 
         Returns:
-            policy_logits: B * ACT_DIM
-            values: B
+            policy_logits: N * ACTION_DIM
+            values: N
         """
         conv1 = self.conv1(obs)
         conv2 = self.conv2(conv1)

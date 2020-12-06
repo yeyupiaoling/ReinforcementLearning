@@ -2,6 +2,7 @@ import retrowrapper
 import retro
 
 if __name__ == "__main__":
+    # 使用retrowrapper可以同时创建多个retro游戏
     env1 = retrowrapper.RetroWrapper(game='SnowBrothers-Nes',
                                      state=retro.State.DEFAULT,
                                      use_restricted_actions=retro.Actions.DISCRETE,
