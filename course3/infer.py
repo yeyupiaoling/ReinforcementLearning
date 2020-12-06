@@ -43,7 +43,7 @@ def main():
     algorithm = parl.algorithms.DDPG(model, gamma=0.99, tau=0.001, actor_lr=1e-4, critic_lr=1e-3)
     agent = Agent(algorithm=algorithm,
                   obs_dim=RESIZE_SHAPE,
-                  act_dim=action_dim)
+                  action_dim=action_dim)
 
     agent.restore(SAVE_MODEL_PATH)
 

@@ -39,6 +39,7 @@ def preprocess(observation):
     return observation
 
 
+# 训练模型
 def run_train(agent, env, rpm):
     total_reward = 0
     obs = env.reset()
@@ -54,7 +55,7 @@ def run_train(agent, env, rpm):
         # 记录数据
         rpm.append((obs, [action], reward, next_obs, isOver))
 
-        # 训练模型
+        # 在预热完成之后，每隔LEARN_FREQ步数就训练一次
         if (len(rpm) > MEMORY_WARMUP_SIZE) and (step % LEARN_FREQ == 0):
             (batch_obs, batch_action, batch_reward, batch_next_obs, batch_isOver) = rpm.sample(BATCH_SIZE)
             train_loss = agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_isOver)
@@ -96,7 +97,7 @@ def main():
     algorithm = parl.algorithms.DQN(model, act_dim=action_dim, gamma=GAMMA, lr=LEARNING_RATE)
     agent = Agent(algorithm=algorithm,
                   obs_dim=obs_dim,
-                  act_dim=action_dim,
+                  action_dim=action_dim,
                   e_greed=E_GREED,
                   e_greed_decrement=E_GREED_DECREMENT)
 

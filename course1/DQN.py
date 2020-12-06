@@ -111,7 +111,7 @@ def run_train(env, replay_buffer):
         # 显示游戏界面
         env.render()
         state = np.expand_dims(state, axis=0)
-        # 定义探索策略
+        # 定义贪心探索策略
         e_greed = max(0.01, e_greed - e_greed_decrement)
         if np.random.rand() < e_greed:
             # 以 e_greed 的概率选择随机下一步动作

@@ -26,14 +26,17 @@ class Agent(parl.Agent):
         self.e_greed = e_greed
         self.e_greed_decrement = e_greed_decrement
 
+    # 获取PaddlePaddle程序
     def build_program(self):
         self.pred_program = fluid.Program()
         self.learn_program = fluid.Program()
 
+        # 获取预测程序
         with fluid.program_guard(self.pred_program):
             obs = layers.data(name='obs', shape=[self.obs_dim], dtype='float32')
             self.value = self.alg.predict(obs)
 
+        # 获取训练程序
         with fluid.program_guard(self.learn_program):
             obs = layers.data(name='obs', shape=[self.obs_dim], dtype='float32')
             action = layers.data(name='act', shape=[1], dtype='int32')

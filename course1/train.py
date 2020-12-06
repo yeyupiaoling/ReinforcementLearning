@@ -17,6 +17,7 @@ E_GREED_DECREMENT = 1e-6  # 在训练过程中，降低探索的概率
 MAX_EPISODE = 10000  # 训练次数
 
 
+# 训练模型
 def run_train(agent, env, rpm):
     total_reward = 0
     obs = env.reset()
@@ -30,7 +31,7 @@ def run_train(agent, env, rpm):
         # 记录数据
         rpm.append((obs, [action], reward, next_obs, isOver))
 
-        # train model
+        # 在预热完成之后，每隔LEARN_FREQ步数就训练一次
         if (len(rpm) > MEMORY_WARMUP_SIZE) and (step % LEARN_FREQ == 0):
             (batch_obs, batch_action, batch_reward, batch_next_obs, batch_isOver) = rpm.sample(BATCH_SIZE)
             agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_isOver)
@@ -52,8 +53,11 @@ def evaluate(agent, env):
         episode_reward = 0
         isOver = False
         while not isOver:
-            action = agent.predict(obs)
+            # 显示游戏界面
             env.render()
+            # 预测游戏动作
+            action = agent.predict(obs)
+            # 执行游戏
             obs, reward, isOver, _ = env.step(action)
             episode_reward += reward
         eval_reward.append(episode_reward)
@@ -76,7 +80,7 @@ def main():
     algorithm = parl.algorithms.DQN(model, act_dim=action_dim, gamma=GAMMA, lr=LEARNING_RATE)
     agent = Agent(algorithm=algorithm,
                   obs_dim=obs_shape[0],
-                  act_dim=action_dim,
+                  action_dim=action_dim,
                   e_greed=E_GREED,
                   e_greed_decrement=E_GREED_DECREMENT)
 

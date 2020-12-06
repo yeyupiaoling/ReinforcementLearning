@@ -3,10 +3,12 @@ import random
 
 
 def main():
+    # 创建游戏
     env = flappyBird.GameState()
 
     obs = env.reset()
     while True:
+        # 游戏动作只有0和1,1是往上飞，0不做任何操作，小鸟掉下来
         action = random.randint(0, 1)
         obs, reward, isOver = env.step(action)
         print("="*50)
