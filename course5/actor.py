@@ -71,7 +71,7 @@ class Actor(object):
             env_sample_data[env_id] = defaultdict(list)
 
         total_reward = 0
-        # 根据设定，没有获取指定步数的数据
+        # 根据设定，获取指定步数的数据
         for i in range(self.config['sample_batch_steps']):
             # 执行预测
             actions_batch, values_batch = self.agent.sample(np.stack(self.obs_batch))

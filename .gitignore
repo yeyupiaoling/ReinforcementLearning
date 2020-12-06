@@ -5,8 +5,8 @@ roms/
 temp/models/
 course2/models/
 course3/models/
-course4/models
-course4/train_log
+course3/models
+course3/train_log
 course5/models
 course5/train_log
 course6/models

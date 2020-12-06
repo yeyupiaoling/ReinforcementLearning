@@ -1,200 +1,208 @@
 import argparse
-import os
-import cv2
+import gym
 import numpy as np
 import parl
-import retro
 from agent import Agent
-from model import ActorModel, CriticModel
-from parl.utils import logger, summary
-from replay_memory import ReplayMemory
-
-ACTOR_LR = 1e-4  # actor模型的学习率
-CRITIC_LR = 1e-4  # critic模型的学习速率
-GAMMA = 0.99  # 奖励系数
-TAU = 0.005  # 衰减参数
-MEMORY_SIZE = int(1e5)  # 内存记忆大小
-WARMUP_SIZE = 1e4  # 热身大小
-BATCH_SIZE = 32  # batch大小
-ENV_SEED = 1  # 固定随机情况
-RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小，减少模型计算，原大小（224,240）
+from model import Model
+from parl.utils import logger, action_mapping
+from parl.utils.rl_utils import calc_gae, calc_discount_sum_rewards
+from scaler import Scaler
 
 
-# 改变游戏的布局环境，减低输入图像的复杂度
-def change_obs_color(obs, src, target):
-    for i in range(len(src)):
-        index = (obs == src[i])
-        obs[index] = target[i]
-    return obs
-
-
-# 图像预处理
-def preprocess(observation, render=False):
-    assert RESIZE_SHAPE[0] == 1 or RESIZE_SHAPE[0] == 3
-    w, h, c = observation.shape
-    observation = observation[25:h, 15:w]
-    if RESIZE_SHAPE[0] == 1:
-        # 把图像转成灰度图
-        observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
-        # 把其他的亮度调成一种，减低图像的复杂度
-        observation = change_obs_color(observation, [66, 88, 114, 186, 189, 250], [255, 255, 255, 255, 255, 0])
-        observation = cv2.resize(observation, (RESIZE_SHAPE[2], RESIZE_SHAPE[1]))
-        if render:
-            # 显示处理过的图像
-            cv2.imshow("preprocess", observation)
-            cv2.waitKey(1)
-        observation = np.expand_dims(observation, axis=0)
-    else:
-        observation = cv2.resize(observation, (RESIZE_SHAPE[2], RESIZE_SHAPE[1]))
-        observation = cv2.cvtColor(observation, cv2.COLOR_RGB2BGR)
-        if render:
-            # 显示处理过的图像
-            cv2.imshow("preprocess", observation)
-            cv2.waitKey(1)
-        observation = observation.transpose((2, 0, 1))
-    observation = observation / 255.0
-    return observation
-
-
-# 训练模型
-def run_train_episode(env, agent, rpm, render=False):
+def run_train_episode(env, agent, scaler):
     obs = env.reset()
-    obs = preprocess(obs, render)
-    total_reward = 0
-    steps = 0
-    lives = 2
+    observes, actions, rewards, unscaled_obs = [], [], [], []
+    step = 0.0
+    scale, offset = scaler.get()
+    scale[-1] = 1.0  # don't scale time step feature
+    offset[-1] = 0.0  # don't offset time step feature
     while True:
-        steps += 1
-        if render:
-            # 显示视频图像
-            env.render()
-        if rpm.size() < WARMUP_SIZE:
-            # 获取随机动作
-            action = env.action_space.sample()
-        else:
-            # 预测动作
-            action = agent.sample(obs)
-            # 获取动作
-            action = [0 if a < 0 else 1 for a in action]
+        obs = obs.reshape((1, -1))
+        obs = np.append(obs, [[step]], axis=1)  # add time step feature
+        unscaled_obs.append(obs)
+        obs = (obs - offset) * scale  # center and scale observations
+        obs = obs.astype('float32')
+        observes.append(obs)
 
-        # 执行游戏
-        next_obs, reward, isOver, info = env.step(action)
-        next_obs = preprocess(next_obs, render)
+        action = agent.policy_sample(obs)
+        action = np.clip(action, -1.0, 1.0)
+        action = action_mapping(action, env.action_space.low[0],
+                                env.action_space.high[0])
 
-        # 死一次就直接结束
-        if info['lives'] < lives:
-            isOver = True
+        action = action.reshape((1, -1)).astype('float32')
+        actions.append(action)
 
-        # 记录数据
-        rpm.append(obs, action, reward, next_obs, isOver)
+        obs, reward, done, _ = env.step(np.squeeze(action))
+        rewards.append(reward)
+        step += 1e-3  # increment time step feature
 
-        # 训练模型
-        if rpm.size() > WARMUP_SIZE:
-            batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal = rpm.sample_batch(BATCH_SIZE)
-            agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal)
-
-        obs = next_obs
-        total_reward += reward
-
-        if isOver:
+        if done:
             break
-    return total_reward, steps
+
+    return (np.concatenate(observes), np.concatenate(actions),
+            np.array(rewards, dtype='float32'), np.concatenate(unscaled_obs))
 
 
-# 评估模型
-def run_evaluate_episode(env, agent, render=False):
+def run_evaluate_episode(env, agent, scaler):
     obs = env.reset()
-    total_reward = 0
+    rewards = []
+    step = 0.0
+    scale, offset = scaler.get()
+    scale[-1] = 1.0  # don't scale time step feature
+    offset[-1] = 0.0  # don't offset time step feature
     while True:
-        if render:
-            # 显示视频图像
-            env.render()
-        obs = preprocess(obs, render)
-        # 预测动作
-        action = agent.predict(obs)
-        action = np.squeeze(action)
-        # 获取动作
-        action = [0 if a < 0 else 1 for a in action]
-        # 执行游戏
-        next_obs, reward, isOver, info = env.step(action)
+        obs = obs.reshape((1, -1))
+        obs = np.append(obs, [[step]], axis=1)  # add time step feature
+        obs = (obs - offset) * scale  # center and scale observations
+        obs = obs.astype('float32')
 
-        obs = next_obs
-        total_reward += reward
+        action = agent.policy_predict(obs)
+        action = action_mapping(action, env.action_space.low[0],
+                                env.action_space.high[0])
 
-        if isOver:
+        obs, reward, done, _ = env.step(np.squeeze(action))
+        rewards.append(reward)
+
+        step += 1e-3  # increment time step feature
+
+        if done:
             break
-    return total_reward
+    return np.sum(rewards)
+
+
+def collect_trajectories(env, agent, scaler, episodes):
+    trajectories, all_unscaled_obs = [], []
+    for e in range(episodes):
+        obs, actions, rewards, unscaled_obs = run_train_episode(
+            env, agent, scaler)
+        trajectories.append({
+            'obs': obs,
+            'actions': actions,
+            'rewards': rewards,
+        })
+        all_unscaled_obs.append(unscaled_obs)
+    # update running statistics for scaling observations
+    scaler.update(np.concatenate(all_unscaled_obs))
+    return trajectories
+
+
+def build_train_data(trajectories, agent):
+    train_obs, train_actions, train_advantages, train_discount_sum_rewards = [], [], [], []
+    for trajectory in trajectories:
+        pred_values = agent.value_predict(trajectory['obs'])
+
+        # scale rewards
+        scale_rewards = trajectory['rewards'] * (1 - args.gamma)
+
+        discount_sum_rewards = calc_discount_sum_rewards(
+            scale_rewards, args.gamma).astype('float32')
+
+        advantages = calc_gae(scale_rewards, pred_values, 0, args.gamma,
+                              args.lam)
+
+        # normalize advantages
+        advantages = (advantages - advantages.mean()) / (
+            advantages.std() + 1e-6)
+        advantages = advantages.astype('float32')
+
+        train_obs.append(trajectory['obs'])
+        train_actions.append(trajectory['actions'])
+        train_advantages.append(advantages)
+        train_discount_sum_rewards.append(discount_sum_rewards)
+
+    train_obs = np.concatenate(train_obs)
+    train_actions = np.concatenate(train_actions)
+    train_advantages = np.concatenate(train_advantages)
+    train_discount_sum_rewards = np.concatenate(train_discount_sum_rewards)
+
+    return train_obs, train_actions, train_advantages, train_discount_sum_rewards
 
 
 def main():
-    # 初始化游戏
-    env = retro.make(game=args.env)
-    env.seed(ENV_SEED)
+    env = gym.make(args.env)
 
-    # 游戏的图像形状
-    obs_dim = RESIZE_SHAPE
-    # 动作维度
-    action_dim = env.action_space.n
-    # 动作正负的最大绝对值
-    max_action = 1
+    obs_dim = env.observation_space.shape[0]
+    act_dim = env.action_space.shape[0]
+    obs_dim += 1  # add 1 to obs dim for time step feature
 
-    # 创建模型
-    actor = ActorModel(action_dim)
-    critic = CriticModel()
-    algorithm = parl.algorithms.SAC(actor=actor,
-                                    critic=critic,
-                                    max_action=max_action,
-                                    gamma=GAMMA,
-                                    tau=TAU,
-                                    actor_lr=ACTOR_LR,
-                                    critic_lr=CRITIC_LR)
-    agent = Agent(algorithm, obs_dim, action_dim)
+    scaler = Scaler(obs_dim)
 
-    # 创建记录数据存储器
-    rpm = ReplayMemory(MEMORY_SIZE, obs_dim, action_dim)
+    model = Model(obs_dim, act_dim)
+    alg = parl.algorithms.PPO(
+        model,
+        act_dim=act_dim,
+        policy_lr=model.policy_lr,
+        value_lr=model.value_lr)
+    agent = Agent(
+        alg, obs_dim, act_dim, args.kl_targ, loss_type=args.loss_type)
 
-    total_steps = 0 
+    # run a few episodes to initialize scaler
+    collect_trajectories(env, agent, scaler, episodes=5)
+
+    test_flag = 0
+    total_steps = 0
     while total_steps < args.train_total_steps:
-        # 训练
-        train_reward, steps = run_train_episode(env, agent, rpm, render=args.show_play)
-        logger.info('Steps: {} Reward: {}'.format(total_steps, train_reward))
-        summary.add_scalar('train/episode_reward', train_reward, total_steps)
-        total_steps += steps
+        trajectories = collect_trajectories(
+            env, agent, scaler, episodes=args.episodes_per_batch)
+        total_steps += sum([t['obs'].shape[0] for t in trajectories])
+        total_train_rewards = sum([np.sum(t['rewards']) for t in trajectories])
 
-        # 评估
-        if total_steps % 1000 == 0:
-            evaluate_reward = run_evaluate_episode(env, agent, render=args.show_play)
-            logger.info('Steps {}, Evaluate reward: {}'.format(total_steps, evaluate_reward))
-            summary.add_scalar('eval/episode_reward', evaluate_reward, total_steps)
+        train_obs, train_actions, train_advantages, train_discount_sum_rewards = build_train_data(
+            trajectories, agent)
 
-        # 保存模型
-        if not os.path.exists(os.path.dirname(args.model_path)):
-            os.makedirs(os.path.dirname(args.model_path))
-        agent.save(args.model_path)
+        policy_loss, kl = agent.policy_learn(train_obs, train_actions,
+                                             train_advantages)
+        value_loss = agent.value_learn(train_obs, train_discount_sum_rewards)
+
+        logger.info(
+            'Steps {}, Train reward: {}, Policy loss: {}, KL: {}, Value loss: {}'
+            .format(total_steps, total_train_rewards / args.episodes_per_batch,
+                    policy_loss, kl, value_loss))
+        if total_steps // args.test_every_steps >= test_flag:
+            while total_steps // args.test_every_steps >= test_flag:
+                test_flag += 1
+            eval_reward = run_evaluate_episode(env, agent, scaler)
+            logger.info('Steps {}, Evaluate reward: {}'.format(
+                total_steps, eval_reward))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env',
-                        type=str,
-                        default='SnowBrothers-Nes',
-                        help='Nes environment name')
-    parser.add_argument('--train_total_steps',
-                        type=int,
-                        default=int(1e7),
-                        help='maximum training steps')
-    parser.add_argument('--show_play',
-                        type=bool,
-                        default=True,
-                        help='if show game play')
-    parser.add_argument('--model_path',
-                        type=str,
-                        default='models/model.ckpt',
-                        help='save model path')
-    parser.add_argument('--alpha',
-                        type=float,
-                        default=0.2,
-                        help='Temperature parameter α determines the relative importance of the \
-        entropy term against the reward (default: 0.2)')
+    parser.add_argument(
+        '--env',
+        type=str,
+        help='Mujoco environment name',
+        default='HalfCheetah-v2')
+    parser.add_argument(
+        '--gamma', type=float, help='Discount factor', default=0.995)
+    parser.add_argument(
+        '--lam',
+        type=float,
+        help='Lambda for Generalized Advantage Estimation',
+        default=0.98)
+    parser.add_argument(
+        '--kl_targ', type=float, help='D_KL target value', default=0.003)
+    parser.add_argument(
+        '--episodes_per_batch',
+        type=int,
+        help='Number of episodes per training batch',
+        default=5)
+    parser.add_argument(
+        '--loss_type',
+        type=str,
+        help="Choose loss type of PPO algorithm, 'CLIP' or 'KLPEN'",
+        default='CLIP')
+    parser.add_argument(
+        '--train_total_steps',
+        type=int,
+        default=int(1e7),
+        help='maximum training steps')
+    parser.add_argument(
+        '--test_every_steps',
+        type=int,
+        default=int(1e4),
+        help='the step interval between two consecutive evaluations')
+
     args = parser.parse_args()
+
     main()

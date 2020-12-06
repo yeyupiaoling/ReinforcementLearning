@@ -1,26 +1,23 @@
 import argparse
 import os
-import random
 import cv2
-import retro
 import numpy as np
 import parl
+import retro
 from agent import Agent
-from model import Model
-from parl.utils import logger
+from model import ActorModel, CriticModel
+from parl.utils import logger, summary
 from replay_memory import ReplayMemory
 
-
 ACTOR_LR = 1e-4  # actor模型的学习率
-CRITIC_LR = 1e-3  # critic模型的学习速率
+CRITIC_LR = 1e-4  # critic模型的学习速率
 GAMMA = 0.99  # 奖励系数
-TAU = 0.001  # 衰减参数
-MEMORY_SIZE = int(1e4)  # 内存记忆大小
-MEMORY_WARMUP_SIZE = 1e3  # 热身大小
+TAU = 0.005  # 衰减参数
+MEMORY_SIZE = int(1e5)  # 内存记忆大小
+WARMUP_SIZE = 1e4  # 热身大小
 BATCH_SIZE = 32  # batch大小
-REWARD_SCALE = 0.1  # 奖励比例
 ENV_SEED = 1  # 固定随机情况
-RESIZE_SHAPE = (1, 84, 84)  # 训练缩放的大小，减少模型计算，原大小（224,240）
+RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小，减少模型计算，原大小（224,240）
 
 
 # 改变游戏的布局环境，减低输入图像的复杂度
@@ -59,49 +56,49 @@ def preprocess(observation, render=False):
     return observation
 
 
-# 生成符合概率的动作
-def categorical(policy):
-    r = random.random()
-    p1 = 0
-    for i, p in enumerate(policy):
-        p1 += p
-        if r < p1:
-            return i
-
-
 # 训练模型
 def run_train_episode(env, agent, rpm, render=False):
     obs = env.reset()
     obs = preprocess(obs, render)
     total_reward = 0
+    steps = 0
+    lives = 2
     while True:
+        steps += 1
         if render:
             # 显示视频图像
             env.render()
-        policy = agent.predict(obs)
-        # 生成符合概率的动作
-        action = categorical(policy)
+        if rpm.size() < WARMUP_SIZE:
+            # 获取随机动作
+            action = env.action_space.sample()
+        else:
+            # 预测动作
+            action = agent.sample(obs)
+            # 获取动作
+            action = [0 if a < 0 else 1 for a in action]
 
-        next_obs, reward, terminal, info = env.step(action)
+        # 执行游戏
+        next_obs, reward, isOver, info = env.step(action)
         next_obs = preprocess(next_obs, render)
 
         # 死一次就直接结束
-        if info['lives'] != 2:
-            terminal = True
+        if info['lives'] < lives:
+            isOver = True
 
-        rpm.append(obs, action, REWARD_SCALE * reward, next_obs, terminal)
+        # 记录数据
+        rpm.append(obs, action, reward, next_obs, isOver)
 
         # 训练模型
-        if rpm.size() > MEMORY_WARMUP_SIZE:
+        if rpm.size() > WARMUP_SIZE:
             batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal = rpm.sample_batch(BATCH_SIZE)
             agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal)
 
         obs = next_obs
         total_reward += reward
 
-        if terminal:
+        if isOver:
             break
-    return total_reward
+    return total_reward, steps
 
 
 # 评估模型
@@ -114,57 +111,61 @@ def run_evaluate_episode(env, agent, render=False):
             env.render()
         obs = preprocess(obs, render)
         # 预测动作
-        policy = agent.predict(obs.astype('float32'))
-        action = np.argmax(policy)
+        action = agent.predict(obs)
+        action = np.squeeze(action)
+        # 获取动作
+        action = [0 if a < 0 else 1 for a in action]
         # 执行游戏
-        next_obs, reward, terminal, info = env.step(action)
+        next_obs, reward, isOver, info = env.step(action)
 
         obs = next_obs
         total_reward += reward
 
-        if terminal:
+        if isOver:
             break
     return total_reward
 
 
 def main():
-    # 初始化游戏，game指定游戏，state指定开始状态，use_restricted_actions指定动作类型，players指定玩家数量，obs_type指定输出obs的类型
-    env = retro.RetroEnv(game='SnowBrothers-Nes',
-                         state=retro.State.DEFAULT,
-                         use_restricted_actions=retro.Actions.DISCRETE,
-                         players=1,
-                         obs_type=retro.Observations.IMAGE)
+    # 初始化游戏
+    env = retro.make(game=args.env)
     env.seed(ENV_SEED)
 
     # 游戏的图像形状
     obs_dim = RESIZE_SHAPE
     # 动作维度
     action_dim = env.action_space.n
+    # 动作正负的最大绝对值
+    max_action = 1
 
     # 创建模型
-    model = Model(action_dim)
-    algorithm = parl.algorithms.DDPG(model, gamma=GAMMA, tau=TAU, actor_lr=ACTOR_LR, critic_lr=CRITIC_LR)
+    actor = ActorModel(action_dim)
+    critic = CriticModel()
+    algorithm = parl.algorithms.SAC(actor=actor,
+                                    critic=critic,
+                                    max_action=max_action,
+                                    gamma=GAMMA,
+                                    tau=TAU,
+                                    actor_lr=ACTOR_LR,
+                                    critic_lr=CRITIC_LR)
     agent = Agent(algorithm, obs_dim, action_dim)
 
     # 创建记录数据存储器
     rpm = ReplayMemory(MEMORY_SIZE, obs_dim, action_dim)
 
-    print("开始预热...")
-    while rpm.size() < MEMORY_WARMUP_SIZE:
-        run_train_episode(env, agent, rpm, render=args.show_play)
-
-    print("开始正式训练...")
-    episode = 0
-    while episode < args.train_total_episode:
+    total_steps = 0 
+    while total_steps < args.train_total_steps:
         # 训练
-        for i in range(50):
-            train_reward = run_train_episode(env, agent, rpm, render=args.show_play)
-            episode += 1
-            logger.info('Episode: {} Reward: {}'.format(episode, train_reward))
+        train_reward, steps = run_train_episode(env, agent, rpm, render=args.show_play)
+        logger.info('Steps: {} Reward: {}'.format(total_steps, train_reward))
+        summary.add_scalar('train/episode_reward', train_reward, total_steps)
+        total_steps += steps
 
         # 评估
-        evaluate_reward = run_evaluate_episode(env, agent, render=args.show_play)
-        logger.info('Episode {}, Evaluate reward: {}'.format(episode, evaluate_reward))
+        if total_steps % 1000 == 0:
+            evaluate_reward = run_evaluate_episode(env, agent, render=args.show_play)
+            logger.info('Steps {}, Evaluate reward: {}'.format(total_steps, evaluate_reward))
+            summary.add_scalar('eval/episode_reward', evaluate_reward, total_steps)
 
         # 保存模型
         if not os.path.exists(os.path.dirname(args.model_path)):
@@ -174,10 +175,26 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_total_episode', type=int, default=int(1e4), help='maximum training episodes')
-    parser.add_argument('--model_path', type=str, default='models/model.ckpt', help='save model path')
-    parser.add_argument('--show_play', type=bool, default=True, help='if show game play')
-
+    parser.add_argument('--env',
+                        type=str,
+                        default='SnowBrothers-Nes',
+                        help='Nes environment name')
+    parser.add_argument('--train_total_steps',
+                        type=int,
+                        default=int(1e7),
+                        help='maximum training steps')
+    parser.add_argument('--show_play',
+                        type=bool,
+                        default=True,
+                        help='if show game play')
+    parser.add_argument('--model_path',
+                        type=str,
+                        default='models/model.ckpt',
+                        help='save model path')
+    parser.add_argument('--alpha',
+                        type=float,
+                        default=0.2,
+                        help='Temperature parameter α determines the relative importance of the \
+        entropy term against the reward (default: 0.2)')
     args = parser.parse_args()
-
     main()
