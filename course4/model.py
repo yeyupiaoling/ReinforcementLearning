@@ -32,7 +32,7 @@ class PolicyModel(parl.Model):
         self.fc1 = layers.fc(size=256, act='tanh')
         self.fc2 = layers.fc(size=512, act='tanh')
         self.fc3 = layers.fc(size=128, act='tanh')
-        self.fc4 = layers.fc(size=act_dim, act='tanh')
+        self.fc4 = layers.fc(size=act_dim, act=None)
 
         self.logvars = layers.create_parameter(
             shape=[act_dim],

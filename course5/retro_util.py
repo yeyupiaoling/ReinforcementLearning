@@ -35,13 +35,14 @@ class RetroEnv(retro.RetroEnv):
             total_reward = 0
             # 经过一个画面归零
             if info['xscrollHi'] > self.game_info['xscrollHi']:
-                self.game_info['xscrollLo'] = 0
+                self.game_info['xscrollLo'] = self.game_info['xscrollLo'] - 250
             # 向前移动奖励
             total_reward += info['xscrollLo'] - self.game_info['xscrollLo']
             # 记录得到的分数
             total_reward += (info['score'] - self.game_info['score']) * 0.1
-            # 通过奖励
+            # 通关奖励
             total_reward += (info['levelHi'] - self.game_info['levelHi']) * 100
+            # 通一关就结束
             if info['levelHi'] > self.game_info['levelHi']:
                 terminal = True
             # 如何在训练的情况下，死一次就结束游戏
@@ -50,6 +51,7 @@ class RetroEnv(retro.RetroEnv):
                     total_reward = -10
                     terminal = True
             self.game_info = info
+        # 图像预处理
         obs = self.preprocess(obs, self.render_preprocess)
         return obs, total_reward, terminal, info
 

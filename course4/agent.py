@@ -2,6 +2,7 @@ import numpy as np
 import parl
 from parl import layers
 from paddle import fluid
+from parl.core.fluid.policy_distribution import CategoricalDistribution
 
 
 class Agent(parl.Agent):
@@ -73,17 +74,21 @@ class Agent(parl.Agent):
 
     def policy_sample(self, obs):
         feed = {'obs': obs.astype('float32')}
-        sampled_act = self.fluid_executor.run(program=self.policy_sample_program,
-                                              feed=feed,
-                                              fetch_list=self.policy_sample_output)[0]
-        return sampled_act
+        logits = self.fluid_executor.run(program=self.policy_sample_program,
+                                         feed=feed,
+                                         fetch_list=self.policy_sample_output)[0]
+        policy_dist = CategoricalDistribution(logits)
+        sample_actions = policy_dist.sample()
+        return sample_actions
 
     def policy_predict(self, obs):
         feed = {'obs': obs.astype('float32')}
-        means = self.fluid_executor.run(program=self.policy_predict_program,
-                                        feed=feed,
-                                        fetch_list=self.policy_predict_output)[0]
-        return means
+        logits = self.fluid_executor.run(program=self.policy_predict_program,
+                                         feed=feed,
+                                         fetch_list=self.policy_predict_output)[0]
+        probs = layers.softmax(logits)
+        predict_actions = layers.argmax(probs, 1)
+        return predict_actions
 
     def value_predict(self, obs):
         feed = {'obs': obs.astype('float32')}

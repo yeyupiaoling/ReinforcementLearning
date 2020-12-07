@@ -27,20 +27,11 @@ def run_train_episode(env, agent, scaler: Scaler):
         observes.append(obs)
 
         action = agent.policy_sample(obs)
-        action = np.squeeze(action)
-        action = np.clip(action, -1.0, 1.0)
-        action = action_mapping(action, -1.0, 1.0)
-        action = np.array([0 if a < 0 else 1 for a in action])
         print(action)
         action = action.reshape((1, -1)).astype('float32')
         actions.append(action)
 
         obs, reward, isOver, info = env.step(np.squeeze(action))
-
-        # 死一次就直接结束
-        if info['lives'] != 2:
-            isOver = True
-            reward = -10
 
         rewards.append(reward)
         step += 1e-3  # increment time step feature
@@ -67,9 +58,6 @@ def run_evaluate_episode(env, agent, scaler):
         obs = obs.astype('float32')
 
         action = agent.policy_predict(obs)
-        action = action_mapping(action, env.action_space.low[0],
-                                env.action_space.high[0])
-
         obs, reward, done, _ = env.step(np.squeeze(action))
         rewards.append(reward)
 
