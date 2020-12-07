@@ -40,7 +40,6 @@ def run_train_episode(env, agent, rpm, render=False):
 
         # 执行游戏
         next_obs, reward, isOver, info = env.step(action)
-        print(reward)
         print(info)
 
         # 死一次就直接结束
@@ -88,7 +87,7 @@ def run_evaluate_episode(env, agent, render=False):
 def main():
     # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小，render_preprocess是否显示预处理后的图像
     env = retro_util.RetroEnv(game=args.env,
-                              skill_frame=4,
+                              skill_frame=3,
                               resize_shape=RESIZE_SHAPE,
                               render_preprocess=args.show_play)
     env.seed(ENV_SEED)
@@ -151,7 +150,7 @@ if __name__ == '__main__':
                         help='maximum training steps')
     parser.add_argument('--show_play',
                         type=bool,
-                        default=True,
+                        default=False,
                         help='if show game play')
     parser.add_argument('--model_path',
                         type=str,

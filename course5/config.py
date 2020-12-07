@@ -5,7 +5,7 @@ config = {
 
     # ========== 游戏环境参数 ==========
     # 游戏名字
-    'env_name': 'SnowBrothers-Nes',
+    'env_name': 'SuperMarioBros-Nes',
     # 处理后的游戏图像大小
     'obs_shape': (1, 112, 112),
     # Actor的数量
