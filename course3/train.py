@@ -40,10 +40,13 @@ def run_train_episode(env, agent, rpm, render=False):
 
         # 执行游戏
         next_obs, reward, isOver, info = env.step(action)
+        print(reward)
+        print(info)
 
         # 死一次就直接结束
         if info['lives'] != lives:
             isOver = True
+            reward = -10
 
         # 记录数据
         rpm.append(obs, action, reward, next_obs, isOver)

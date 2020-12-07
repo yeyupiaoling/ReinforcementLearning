@@ -16,7 +16,7 @@ class RetroEnv(retro.RetroEnv):
         self.skill_frame = skill_frame
         self.render_preprocess = render_preprocess
         self.observation_space.shape = resize_shape
-        self.game_info = {}
+        self.game_info = None
 
     def step(self, a):
         total_reward = 0
@@ -26,9 +26,21 @@ class RetroEnv(retro.RetroEnv):
             total_reward += reward
             if terminal:
                 break
+
+        if self.game_info is None:
+            self.game_info = info
+        # 超级马里奥奖励处理
         if self.game == 'SuperMarioBros-Nes':
+            total_reward = 0
+            # 经过一个画面归零
+            if info['xscrollHi'] > self.game_info['xscrollHi']:
+                self.game_info['xscrollLo'] = 0
+            # 向前移动奖励
             total_reward += info['xscrollLo'] - self.game_info['xscrollLo']
-            total_reward += info['coins'] - self.game_info['coins']
+            # 记录得到的分数
+            total_reward += (info['score'] - self.game_info['score']) * 0.1
+            # 通过奖励
+            total_reward += (info['levelHi'] - self.game_info['levelHi']) * 100
             self.game_info = info
         obs = self.preprocess(obs, self.render_preprocess)
         return obs, total_reward, terminal, info
