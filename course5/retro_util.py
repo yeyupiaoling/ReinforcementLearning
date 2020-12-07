@@ -11,10 +11,12 @@ class RetroEnv(retro.RetroEnv):
         super(RetroEnv, self).__init__(game, state=state, scenario=scenario, info=info,
                                        use_restricted_actions=use_restricted_actions,
                                        record=record, players=players, inttype=inttype, obs_type=obs_type)
+        self.game = game
         self.resize_shape = resize_shape
         self.skill_frame = skill_frame
         self.render_preprocess = render_preprocess
         self.observation_space.shape = resize_shape
+        self.game_info = {}
 
     def step(self, a):
         total_reward = 0
@@ -24,8 +26,12 @@ class RetroEnv(retro.RetroEnv):
             total_reward += reward
             if terminal:
                 break
+        if self.game == 'SuperMarioBros-Nes':
+            total_reward += info['xscrollLo'] - self.game_info['xscrollLo']
+            total_reward += info['coins'] - self.game_info['coins']
+            self.game_info = info
         obs = self.preprocess(obs, self.render_preprocess)
-        return obs, reward, terminal, info
+        return obs, total_reward, terminal, info
 
     def reset(self):
         obs = super(RetroEnv, self).reset()

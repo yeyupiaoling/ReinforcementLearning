@@ -87,7 +87,7 @@ def main():
     env = retro_util.RetroEnv(game=args.env,
                               skill_frame=4,
                               resize_shape=RESIZE_SHAPE,
-                              render_preprocess=True)
+                              render_preprocess=args.show_play)
     env.seed(ENV_SEED)
 
     # 游戏的图像形状
