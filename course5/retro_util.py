@@ -62,3 +62,7 @@ class RetroEnv(retro.RetroEnv):
             observation = observation.transpose((2, 0, 1))
         observation = observation / 255.0
         return observation
+
+
+def retro_make_func(game, **kwargs):
+    return RetroEnv(game, **kwargs)

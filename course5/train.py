@@ -11,6 +11,7 @@ from parl.utils import logger, summary
 from parl.utils.time_stat import TimeStat
 from parl.utils.window_stat import WindowStat
 
+import retro_util
 from actor import Actor
 from agent import Agent
 from config import config
@@ -22,16 +23,16 @@ class Learner(object):
         self.config = config
 
         # 这里创建游戏单纯是为了获取游戏动作的维度
-        env = retro.RetroEnv(game=config['env_name'],
-                             state=retro.State.DEFAULT,
-                             use_restricted_actions=retro.Actions.DISCRETE,
-                             players=1,
-                             obs_type=retro.Observations.IMAGE)
-        action = env.action_space.n
-        self.config['action_dim'] = action
+        env = retro_util.RetroEnv(game=config['env_name'],
+                                  use_restricted_actions=retro.Actions.DISCRETE,
+                                  skill_frame=4,
+                                  resize_shape=config['obs_shape'],
+                                  render_preprocess=False)
+        action_dim = env.action_space.n
+        self.config['action_dim'] = action_dim
 
         # 这里创建的模型是真正学习使用的
-        model = Model(action)
+        model = Model(action_dim)
         algorithm = parl.algorithms.A3C(model, vf_loss_coeff=config['vf_loss_coeff'])
         self.agent = Agent(algorithm, config)
 

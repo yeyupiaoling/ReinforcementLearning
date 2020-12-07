@@ -1,15 +1,14 @@
 from collections import defaultdict
 
-import cv2
-import numpy
 import numpy as np
 import parl
 import retro
+from parl.env.vector_env import VectorEnv
+from parl.utils.rl_utils import calc_gae
+
 import retrowrapper
 from agent import Agent
 from model import Model
-from parl.env.vector_env import VectorEnv
-from parl.utils.rl_utils import calc_gae
 
 
 @parl.remote_class
@@ -20,47 +19,19 @@ class Actor(object):
         self.envs = []
         for _ in range(config['env_num']):
             env = retrowrapper.RetroWrapper(game=config['env_name'],
-                                            state=retro.State.DEFAULT,
                                             use_restricted_actions=retro.Actions.DISCRETE,
-                                            players=1,
-                                            obs_type=retro.Observations.IMAGE)
+                                            skill_frame=4,
+                                            resize_shape=(1, 112, 112),
+                                            render_preprocess=False)
             self.envs.append(env)
         # 把全部的游戏环境打包，通过这个工具可以方便对跟个游戏操作
         self.vector_env = VectorEnv(self.envs)
         # 获取全部环境的初始界面
         self.obs_batch = self.vector_env.reset()
-        # 把全部图像都只想预处理操作
-        self.obs_batch = [self.preprocess(o) for o in self.obs_batch]
         # 获取每个Actor的模型
         model = Model(self.config['action_dim'])
         algorithm = parl.algorithms.A3C(model, vf_loss_coeff=config['vf_loss_coeff'])
         self.agent = Agent(algorithm, config)
-
-    # 改变游戏的布局环境，减低输入图像的复杂度
-    def change_obs_color(self, obs, src, target):
-        for i in range(len(src)):
-            index = (obs == src[i])
-            obs[index] = target[i]
-        return obs
-
-    # 图像预处理
-    def preprocess(self, observation):
-        assert self.config['obs_shape'][0] == 1 or self.config['obs_shape'][0] == 3
-        w, h, c = observation.shape
-        observation = observation[25:h, 15:w]
-        if self.config['obs_shape'][0] == 1:
-            # 把图像转成灰度图
-            observation = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
-            # 把其他的亮度调成一种，减低图像的复杂度
-            observation = self.change_obs_color(observation, [66, 88, 114, 186, 189, 250], [255, 255, 255, 255, 255, 0])
-            observation = cv2.resize(observation, (self.config['obs_shape'][2], self.config['obs_shape'][1]))
-            observation = numpy.expand_dims(observation, axis=0)
-        else:
-            observation = cv2.resize(observation, (self.config['obs_shape'][2], self.config['obs_shape'][1]))
-            observation = cv2.cvtColor(observation, cv2.COLOR_RGB2BGR)
-            observation = observation.transpose((2, 0, 1))
-        observation = observation / 255.0
-        return observation
 
     def sample(self):
         # 全部数据都存放在这里返回
@@ -79,9 +50,6 @@ class Actor(object):
             next_obs_batch, reward_batch, done_batch, info_batch = self.vector_env.step(actions_batch)
             # 记录分数
             total_reward = total_reward + sum(reward_batch)
-
-            # 把全部图像都只想预处理操作
-            self.next_obs_batch = [self.preprocess(o) for o in self.next_obs_batch]
 
             for env_id in range(self.config['env_num']):
                 # 记录游戏的数据

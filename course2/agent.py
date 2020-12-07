@@ -8,15 +8,15 @@ class Agent(parl.Agent):
     def __init__(self,
                  algorithm,
                  obs_dim,
-                 act_dim,
+                 action_dim,
                  e_greed=0.1,
                  e_greed_decrement=0):
         assert isinstance(obs_dim, tuple)
-        assert isinstance(act_dim, int)
+        assert isinstance(action_dim, int)
         # 预测图像的shape
         self.obs_dim = obs_dim
         # 动作组合的数量
-        self.act_dim = act_dim
+        self.act_dim = action_dim
         super(Agent, self).__init__(algorithm)
 
         self.global_step = 0

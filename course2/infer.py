@@ -5,7 +5,7 @@ import flappy_bird.wrapped_flappy_bird as flappyBird
 from agent import Agent
 from model import Model
 
-RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小
+RESIZE_SHAPE = (1, 224, 224)  # 训练缩放的大小
 SAVE_MODEL_PATH = "models/model.ckpt"  # 保存模型路径
 
 
@@ -49,7 +49,7 @@ def main():
     while not isOver:
         obs = preprocess(obs)
         action = agent.predict(obs)
-        obs, reward, isOver = env.step(action)
+        obs, reward, isOver, info = env.step(action)
         episode_reward += reward
     print("最终得分为：{:.2f}".format(episode_reward))
 

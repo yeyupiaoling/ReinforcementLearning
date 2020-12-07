@@ -1,5 +1,6 @@
 import multiprocessing
 import retro
+import retro_util
 import gc
 
 MAKE_RETRIES = 5
@@ -52,7 +53,7 @@ class RetroWrapper():
     Call functions on this object exactly as if it were a retro env.
     """
     symbol = "THIS IS A SPECIAL MESSAGE FOR YOU"
-    retro_make_func = retro.make
+    retro_make_func = retro_util.retro_make_func
 
     def __init__(self, game, **kwargs):
         tempenv = None

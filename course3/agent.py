@@ -47,6 +47,7 @@ class Agent(parl.Agent):
         action = self.fluid_executor.run(program=self.pred_program,
                                          feed={'obs': obs.astype('float32')},
                                          fetch_list=[self.pred_act])[0]
+        action = np.squeeze(action)
         return action
 
     # 生成要训练的一个游戏动作

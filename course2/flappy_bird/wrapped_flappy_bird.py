@@ -140,7 +140,7 @@ class GameState:
         pygame.display.update()
         if not is_train:
             FPSCLOCK.tick(FPS)
-        return image_data, reward, isOver
+        return image_data, reward, isOver, {}
 
     def reset(self):
         self.__init__()

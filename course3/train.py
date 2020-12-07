@@ -1,9 +1,7 @@
 import argparse
 import os
-import cv2
-import numpy as np
 import parl
-import retro
+import retro_util
 from agent import Agent
 from model import ActorModel, CriticModel
 from parl.utils import logger, summary
@@ -44,7 +42,7 @@ def run_train_episode(env, agent, rpm, render=False):
         next_obs, reward, isOver, info = env.step(action)
 
         # 死一次就直接结束
-        if info['lives'] < lives:
+        if info['lives'] != lives:
             isOver = True
 
         # 记录数据
@@ -73,14 +71,11 @@ def run_evaluate_episode(env, agent, render=False):
             env.render()
         # 预测动作
         action = agent.predict(obs)
-        action = np.squeeze(action)
         # 获取动作
         action = [0 if a < 0 else 1 for a in action]
         # 执行游戏
         next_obs, reward, isOver, info = env.step(action)
-
         obs = next_obs
-        total_reward += reward
 
         if isOver:
             break
@@ -88,9 +83,9 @@ def run_evaluate_episode(env, agent, render=False):
 
 
 def main():
-    # 初始化游戏
-    env = retro_util.RetroEnv(game='SnowBrothers-Nes',
-                              skill_frame=1,
+    # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小，render_preprocess是否显示预处理后的图像
+    env = retro_util.RetroEnv(game=args.env,
+                              skill_frame=4,
                               resize_shape=RESIZE_SHAPE,
                               render_preprocess=True)
     env.seed(ENV_SEED)
@@ -113,6 +108,10 @@ def main():
                                     actor_lr=ACTOR_LR,
                                     critic_lr=CRITIC_LR)
     agent = Agent(algorithm, obs_dim, action_dim)
+
+    # 加载预训练模型
+    if os.path.exists(args.model_path):
+        agent.restore(args.model_path)
 
     # 创建记录数据存储器
     rpm = ReplayMemory(MEMORY_SIZE, obs_dim, action_dim)
@@ -141,7 +140,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--env',
                         type=str,
-                        default='SnowBrothers-Nes',
+                        default='SuperMarioBros-Nes',
                         help='Nes environment name')
     parser.add_argument('--train_total_steps',
                         type=int,

@@ -3,16 +3,16 @@ import retro
 
 if __name__ == "__main__":
     # 使用retrowrapper可以同时创建多个retro游戏
-    env1 = retrowrapper.RetroWrapper(game='SnowBrothers-Nes',
-                                     state=retro.State.DEFAULT,
+    env1 = retrowrapper.RetroWrapper(game='SuperMarioBros-Nes',
                                      use_restricted_actions=retro.Actions.DISCRETE,
-                                     players=1,
-                                     obs_type=retro.Observations.IMAGE)
-    env2 = retrowrapper.RetroWrapper(game='SnowBrothers-Nes',
-                                     state=retro.State.DEFAULT,
+                                     skill_frame=1,
+                                     resize_shape=(1, 112, 112),
+                                     render_preprocess=True)
+    env2 = retrowrapper.RetroWrapper(game='SuperMarioBros-Nes',
                                      use_restricted_actions=retro.Actions.DISCRETE,
-                                     players=1,
-                                     obs_type=retro.Observations.IMAGE)
+                                     skill_frame=1,
+                                     resize_shape=(1, 112, 112),
+                                     render_preprocess=True)
     _obs = env1.reset()
     _obs2 = env2.reset()
 

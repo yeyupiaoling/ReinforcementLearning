@@ -2,8 +2,8 @@ import retro_util
 
 
 def main():
-    # 获取游戏
-    env = retro_util.RetroEnv(game='SnowBrothers-Nes',
+    # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小，render_preprocess是否显示预处理后的图像
+    env = retro_util.RetroEnv(game='SuperMarioBros-Nes',
                               skill_frame=1,
                               resize_shape=(1, 112, 112),
                               render_preprocess=True)

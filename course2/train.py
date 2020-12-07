@@ -17,7 +17,7 @@ GAMMA = 0.99  # 奖励系数
 E_GREED = 0.1  # 探索初始概率
 E_GREED_DECREMENT = 1e-6  # 在训练过程中，降低探索的概率
 MAX_EPISODE = 10000  # 训练次数
-RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小，减少模型计算，原大小（288, 512）
+RESIZE_SHAPE = (1, 224, 224)  # 训练缩放的大小，减少模型计算，原大小（288, 512）
 SAVE_MODEL_PATH = "models/model.ckpt"  # 保存模型路径
 
 
@@ -49,7 +49,7 @@ def run_train(agent, env, rpm):
         step += 1
         # 获取随机动作和执行游戏
         action = agent.sample(obs, env)
-        next_obs, reward, isOver = env.step(action, is_train=True)
+        next_obs, reward, isOver, info = env.step(action, is_train=True)
         next_obs = preprocess(next_obs)
 
         # 记录数据
@@ -76,7 +76,7 @@ def evaluate(agent, env):
     while not isOver:
         obs = preprocess(obs)
         action = agent.predict(obs)
-        obs, reward, isOver = env.step(action)
+        obs, reward, isOver, info = env.step(action)
         episode_reward += reward
     return episode_reward
 
@@ -100,6 +100,10 @@ def main():
                   action_dim=action_dim,
                   e_greed=E_GREED,
                   e_greed_decrement=E_GREED_DECREMENT)
+
+    # 加载预训练模型
+    if os.path.exists(SAVE_MODEL_PATH):
+        agent.restore(SAVE_MODEL_PATH)
 
     # 预热
     print("开始预热...")

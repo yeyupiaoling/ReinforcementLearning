@@ -1,13 +1,14 @@
 import retro
+import retro_util
 
 
 def main():
     # 获取游戏
-    env = retro.RetroEnv(game='SnowBrothers-Nes',
-                         state=retro.State.DEFAULT,
-                         use_restricted_actions=retro.Actions.DISCRETE,
-                         players=1,
-                         obs_type=retro.Observations.IMAGE)
+    env = retro_util.RetroEnv(game='SuperMarioBros-Nes',
+                              use_restricted_actions=retro.Actions.DISCRETE,
+                              skill_frame=1,
+                              resize_shape=(1, 112, 112),
+                              render_preprocess=True)
     obs = env.reset()
 
     while True:
