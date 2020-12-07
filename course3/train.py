@@ -150,7 +150,7 @@ if __name__ == '__main__':
                         help='maximum training steps')
     parser.add_argument('--show_play',
                         type=bool,
-                        default=False,
+                        default=True,
                         help='if show game play')
     parser.add_argument('--model_path',
                         type=str,

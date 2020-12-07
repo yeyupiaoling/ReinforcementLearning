@@ -20,7 +20,7 @@ class Actor(object):
         for _ in range(config['env_num']):
             env = retrowrapper.RetroWrapper(game=config['env_name'],
                                             use_restricted_actions=retro.Actions.DISCRETE,
-                                            skill_frame=4,
+                                            skill_frame=3,
                                             resize_shape=(1, 112, 112),
                                             render_preprocess=False)
             self.envs.append(env)

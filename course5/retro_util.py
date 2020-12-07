@@ -7,13 +7,14 @@ class RetroEnv(retro.RetroEnv):
     def __init__(self, game, state=retro.State.DEFAULT, scenario=None, info=None,
                  use_restricted_actions=retro.Actions.FILTERED, record=False, players=1,
                  inttype=retro.data.Integrations.STABLE, obs_type=retro.Observations.IMAGE,
-                 resize_shape=None, skill_frame=1, render_preprocess=False):
+                 resize_shape=None, skill_frame=1, render_preprocess=False, is_train=False):
         super(RetroEnv, self).__init__(game, state=state, scenario=scenario, info=info,
                                        use_restricted_actions=use_restricted_actions,
                                        record=record, players=players, inttype=inttype, obs_type=obs_type)
         self.game = game
         self.resize_shape = resize_shape
         self.skill_frame = skill_frame
+        self.is_train = is_train
         self.render_preprocess = render_preprocess
         self.observation_space.shape = resize_shape
         self.game_info = None
@@ -41,6 +42,11 @@ class RetroEnv(retro.RetroEnv):
             total_reward += (info['score'] - self.game_info['score']) * 0.1
             # 通过奖励
             total_reward += (info['levelHi'] - self.game_info['levelHi']) * 100
+            # 如何在训练的情况下，死一次就结束游戏
+            if self.is_train:
+                if info['lives'] != 2:
+                    total_reward = -10
+                    terminal = True
             self.game_info = info
         obs = self.preprocess(obs, self.render_preprocess)
         return obs, total_reward, terminal, info

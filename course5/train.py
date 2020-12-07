@@ -25,7 +25,6 @@ class Learner(object):
         # 这里创建游戏单纯是为了获取游戏动作的维度
         env = retro_util.RetroEnv(game=config['env_name'],
                                   use_restricted_actions=retro.Actions.DISCRETE,
-                                  skill_frame=4,
                                   resize_shape=config['obs_shape'],
                                   render_preprocess=False)
         action_dim = env.action_space.n
@@ -35,6 +34,13 @@ class Learner(object):
         model = Model(action_dim)
         algorithm = parl.algorithms.A3C(model, vf_loss_coeff=config['vf_loss_coeff'])
         self.agent = Agent(algorithm, config)
+
+        # 加载预训练模型
+        if self.config['restore_model']:
+            self.agent.restore(os.path.join(self.config['model_path'], 'learn_program'), self.agent.learn_program)
+            self.agent.restore(os.path.join(self.config['model_path'], 'predict_program'), self.agent.predict_program)
+            self.agent.restore(os.path.join(self.config['model_path'], 'sample_program'), self.agent.sample_program)
+            self.agent.restore(os.path.join(self.config['model_path'], 'value_program'), self.agent.value_program)
 
         # 记录训练的日志
         self.total_loss_stat = WindowStat(100)
@@ -158,8 +164,8 @@ class Learner(object):
         if self.start_time is None:
             return
 
-        if not os.path.exists(os.path.dirname(self.config['model_path'])):
-            os.makedirs(os.path.dirname(self.config['model_path']))
+        if not os.path.exists(self.config['model_path']):
+            os.makedirs(self.config['model_path'])
         self.agent.save(self.config['model_path'])
 
     # 检测训练步数是否达到最大步数

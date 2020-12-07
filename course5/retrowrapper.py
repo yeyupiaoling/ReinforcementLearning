@@ -1,5 +1,4 @@
 import multiprocessing
-import retro
 import retro_util
 import gc
 

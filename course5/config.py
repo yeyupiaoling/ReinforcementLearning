@@ -25,8 +25,10 @@ config = {
 
     # 初始学习率
     'start_lr': 0.001,
+    # 是否加载预训练模型
+    'restore_model': False,
     # 模型的保存路径
-    'model_path': 'models/model.ckpt',
+    'model_path': 'models/',
     # 保存日志的时间间隔，单位秒
     'log_metrics_interval_s': 10,
     # 保存模型的时间间隔，单位秒
