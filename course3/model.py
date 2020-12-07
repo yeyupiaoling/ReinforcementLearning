@@ -12,7 +12,8 @@ class ActorModel(parl.Model):
         self.conv3 = layers.conv2d(num_filters=32, filter_size=3, stride=2, padding=1, act='relu')
         self.conv4 = layers.conv2d(num_filters=32, filter_size=3, stride=2, padding=1, act='relu')
 
-        self.fc1 = layers.fc(size=512, act='relu')
+        self.fc1 = layers.fc(size=256, act='relu')
+        self.fc2 = layers.fc(size=512, act='relu')
         self.mean_linear = layers.fc(size=act_dim)
         self.log_std_linear = layers.fc(size=act_dim)
 
@@ -22,9 +23,10 @@ class ActorModel(parl.Model):
         conv3 = self.conv3(conv2)
         conv4 = self.conv4(conv3)
 
-        fc = self.fc1(conv4)
-        means = self.mean_linear(fc)
-        log_std = self.log_std_linear(fc)
+        fc1 = self.fc1(conv4)
+        fc2 = self.fc2(fc1)
+        means = self.mean_linear(fc2)
+        log_std = self.log_std_linear(fc2)
         log_std = layers.clip(log_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
 
         return means, log_std
@@ -37,11 +39,13 @@ class CriticModel(parl.Model):
         self.conv3 = layers.conv2d(num_filters=32, filter_size=3, stride=2, padding=1, act='relu')
         self.conv4 = layers.conv2d(num_filters=32, filter_size=3, stride=2, padding=1, act='relu')
 
-        self.fc1 = layers.fc(size=512, act='relu')
-        self.fc2 = layers.fc(size=1, act=None)
+        self.fc1 = layers.fc(size=256, act='relu')
+        self.fc2 = layers.fc(size=512, act='relu')
+        self.fc3 = layers.fc(size=1, act=None)
 
-        self.fc3 = layers.fc(size=512, act='relu')
-        self.fc4 = layers.fc(size=1, act=None)
+        self.fc4 = layers.fc(size=256, act='relu')
+        self.fc5 = layers.fc(size=512, act='relu')
+        self.fc6 = layers.fc(size=1, act=None)
 
     def value(self, obs, act):
         conv1 = self.conv1(obs)
@@ -52,6 +56,7 @@ class CriticModel(parl.Model):
         hid1 = self.fc1(conv4)
         concat1 = layers.concat([hid1, act], axis=1)
         Q1 = self.fc2(concat1)
+        Q1 = self.fc3(Q1)
         Q1 = layers.squeeze(Q1, axes=[1])
 
         conv5 = self.conv1(obs)
@@ -59,9 +64,10 @@ class CriticModel(parl.Model):
         conv7 = self.conv3(conv6)
         conv8 = self.conv3(conv7)
 
-        hid2 = self.fc3(conv8)
+        hid2 = self.fc4(conv8)
         concat2 = layers.concat([hid2, act], axis=1)
-        Q2 = self.fc4(concat2)
+        Q2 = self.fc5(concat2)
+        Q2 = self.fc6(Q2)
         Q2 = layers.squeeze(Q2, axes=[1])
 
         return Q1, Q2

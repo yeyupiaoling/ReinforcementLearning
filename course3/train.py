@@ -42,11 +42,6 @@ def run_train_episode(env, agent, rpm, render=False):
         next_obs, reward, isOver, info = env.step(action)
         print(info)
 
-        # 死一次就直接结束
-        if info['lives'] != lives:
-            isOver = True
-            reward = -10
-
         # 记录数据
         rpm.append(obs, action, reward, next_obs, isOver)
 
@@ -89,7 +84,8 @@ def main():
     env = retro_util.RetroEnv(game=args.env,
                               skill_frame=3,
                               resize_shape=RESIZE_SHAPE,
-                              render_preprocess=args.show_play)
+                              render_preprocess=args.show_play,
+                              is_train=True)
     env.seed(ENV_SEED)
 
     # 游戏的图像形状
@@ -118,7 +114,8 @@ def main():
     # 创建记录数据存储器
     rpm = ReplayMemory(MEMORY_SIZE, obs_dim, action_dim)
 
-    total_steps = 0 
+    total_steps = 0
+    step_train = 0
     while total_steps < args.train_total_steps:
         # 训练
         train_reward, steps = run_train_episode(env, agent, rpm, render=args.show_play)
@@ -127,10 +124,11 @@ def main():
         total_steps += steps
 
         # 评估
-        if total_steps % 1000 == 0:
+        if step_train % 100 == 0:
             evaluate_reward = run_evaluate_episode(env, agent, render=args.show_play)
             logger.info('Steps {}, Evaluate reward: {}'.format(total_steps, evaluate_reward))
             summary.add_scalar('eval/episode_reward', evaluate_reward, total_steps)
+        step_train += 1
 
         # 保存模型
         if not os.path.exists(os.path.dirname(args.model_path)):

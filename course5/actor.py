@@ -22,7 +22,8 @@ class Actor(object):
                                             use_restricted_actions=retro.Actions.DISCRETE,
                                             skill_frame=3,
                                             resize_shape=(1, 112, 112),
-                                            render_preprocess=False)
+                                            render_preprocess=False,
+                                            is_train=True)
             self.envs.append(env)
         # 把全部的游戏环境打包，通过这个工具可以方便对跟个游戏操作
         self.vector_env = VectorEnv(self.envs)

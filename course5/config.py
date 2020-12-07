@@ -16,7 +16,7 @@ config = {
     'sample_batch_steps': 20,
 
     # ========== 训练模型参数 ==========
-    'max_sample_steps': int(1e7),
+    'max_sample_steps': int(1e9),
     'gamma': 0.99,
     'lambda': 1.0,
     # 策略模型的参数

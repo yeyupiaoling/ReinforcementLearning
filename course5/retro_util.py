@@ -42,6 +42,8 @@ class RetroEnv(retro.RetroEnv):
             total_reward += (info['score'] - self.game_info['score']) * 0.1
             # 通过奖励
             total_reward += (info['levelHi'] - self.game_info['levelHi']) * 100
+            if info['levelHi'] > self.game_info['levelHi']:
+                terminal = True
             # 如何在训练的情况下，死一次就结束游戏
             if self.is_train:
                 if info['lives'] != 2:

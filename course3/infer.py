@@ -1,4 +1,5 @@
 import parl
+
 import retro_util
 from agent import Agent
 from model import ActorModel, CriticModel
@@ -46,6 +47,7 @@ def main():
     isOver = False
     # 游戏未结束执行一直执行游戏
     while not isOver:
+        env.render()
         # 获取动作
         action = agent.predict(obs)
         action = [0 if a < 0 else 1 for a in action]

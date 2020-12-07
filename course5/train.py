@@ -189,3 +189,5 @@ if __name__ == '__main__':
         if time.time() - start1 > config['save_model_interval_s']:
             start1 = time.time()
             learner.save_model()
+    # 最后结束之前保存模型
+    learner.save_model()
