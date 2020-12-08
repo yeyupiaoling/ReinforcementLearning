@@ -1,12 +1,10 @@
-import os
-
 import numpy as np
 import parl
 import retro
+from config import config
 
 import retro_util
 from agent import Agent
-from config import config
 from model import Model
 
 RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小
@@ -28,10 +26,7 @@ def main():
     agent = Agent(algorithm, config)
 
     # 加载模型
-    agent.restore(os.path.join(SAVE_MODEL_PATH, 'learn_program'), agent.learn_program)
-    agent.restore(os.path.join(SAVE_MODEL_PATH, 'predict_program'), agent.predict_program)
-    agent.restore(os.path.join(SAVE_MODEL_PATH, 'sample_program'), agent.sample_program)
-    agent.restore(os.path.join(SAVE_MODEL_PATH, 'value_program'), agent.value_program)
+    agent.restore(config['model_path'])
 
     # 开始游戏
     obs = env.reset()

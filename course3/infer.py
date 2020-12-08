@@ -9,7 +9,7 @@ CRITIC_LR = 1e-4  # critic模型的学习速率
 GAMMA = 0.99  # 奖励系数
 TAU = 0.005  # 衰减参数
 RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小
-SAVE_MODEL_PATH = "models/model.ckpt"  # 保存模型路径
+SAVE_MODEL_PATH = "models"  # 保存模型路径
 
 
 def main():

@@ -23,7 +23,6 @@ def run_train_episode(env, agent, rpm, render=False):
     obs = env.reset()
     total_reward = 0
     steps = 0
-    lives = 2
     while True:
         steps += 1
         if render:
@@ -109,6 +108,7 @@ def main():
 
     # 加载预训练模型
     if os.path.exists(args.model_path):
+        logger.info("加载预训练模型...")
         agent.restore(args.model_path)
 
     # 创建记录数据存储器
@@ -148,11 +148,11 @@ if __name__ == '__main__':
                         help='maximum training steps')
     parser.add_argument('--show_play',
                         type=bool,
-                        default=True,
+                        default=False,
                         help='if show game play')
     parser.add_argument('--model_path',
                         type=str,
-                        default='models/model.ckpt',
+                        default='models',
                         help='save model path')
     parser.add_argument('--alpha',
                         type=float,

@@ -29,8 +29,8 @@ class PolicyModel(parl.Model):
         self.conv3 = layers.conv2d(num_filters=32, filter_size=3, stride=2, padding=1, act='relu')
         self.conv4 = layers.conv2d(num_filters=32, filter_size=3, stride=2, padding=1, act='relu')
 
-        self.fc1 = layers.fc(size=256, act='tanh')
-        self.fc2 = layers.fc(size=512, act='tanh')
+        self.fc1 = layers.fc(size=128, act='tanh')
+        self.fc2 = layers.fc(size=256, act='tanh')
         self.fc3 = layers.fc(size=128, act='tanh')
         self.fc4 = layers.fc(size=act_dim, act=None)
 
@@ -69,8 +69,8 @@ class ValueModel(parl.Model):
         self.conv3 = layers.conv2d(num_filters=32, filter_size=3, stride=2, padding=1, act='relu')
         self.conv4 = layers.conv2d(num_filters=32, filter_size=3, stride=2, padding=1, act='relu')
 
-        self.fc1 = layers.fc(size=256, act='tanh')
-        self.fc2 = layers.fc(size=512, act='tanh')
+        self.fc1 = layers.fc(size=128, act='tanh')
+        self.fc2 = layers.fc(size=256, act='tanh')
         self.fc3 = layers.fc(size=128, act='tanh')
         self.fc4 = layers.fc(size=1)
 

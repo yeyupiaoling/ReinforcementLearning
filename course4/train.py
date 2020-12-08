@@ -5,7 +5,7 @@ import parl
 import retro
 from agent import Agent
 from model import Model
-from parl.utils import logger, action_mapping
+from parl.utils import logger
 from parl.utils.rl_utils import calc_gae, calc_discount_sum_rewards
 from scaler import Scaler
 
@@ -19,27 +19,32 @@ def run_train_episode(env, agent, scaler: Scaler):
     offset[-1] = 0.0  # don't offset time step feature
     while True:
         env.render()
-        obs = np.concatenate((obs, step), axis=1)  # add time step feature
+        # 添加时间特征
+        obs = np.concatenate((obs, step), axis=1)
+        # 时间步长增量特征
+        step += 1e-3
         obs = np.expand_dims(obs, axis=0)
         unscaled_obs.append(obs)
-        obs = (obs - offset) * scale  # center and scale observations
+        # 中心和比例尺观测
+        obs = (obs - offset) * scale
         obs = obs.astype('float32')
         observes.append(obs)
 
+        # 获取动作
         action = agent.policy_sample(obs)
-        print(action)
-        action = action.reshape((1, -1)).astype('float32')
+        action = np.squeeze(action)
         actions.append(action)
 
-        obs, reward, isOver, info = env.step(np.squeeze(action))
+        # 执行游戏
+        obs, reward, isOver, info = env.step(action)
+        print(info)
 
         rewards.append(reward)
-        step += 1e-3  # increment time step feature
 
         if isOver:
             break
 
-    return (np.concatenate(observes), np.concatenate(actions),
+    return (np.concatenate(observes), np.array(actions, dtype='float32'),
             np.array(rewards, dtype='float32'), np.concatenate(unscaled_obs))
 
 
@@ -77,7 +82,7 @@ def collect_trajectories(env, agent, scaler, episodes):
                              'rewards': rewards,
                              })
         all_unscaled_obs.append(unscaled_obs)
-    # update running statistics for scaling observations
+    # 更新伸缩观察的运行统计信息
     scaler.update(np.concatenate(all_unscaled_obs))
     return trajectories
 
@@ -113,10 +118,11 @@ def build_train_data(trajectories, agent):
 
 def main():
     env = retro_util.RetroEnv(game='SuperMarioBros-Nes',
-                              use_restricted_actions=retro.Actions.FILTERED,
+                              use_restricted_actions=retro.Actions.DISCRETE,
                               skill_frame=1,
                               resize_shape=(1, 111, 112),
-                              render_preprocess=True)
+                              render_preprocess=True,
+                              is_train=True)
 
     obs_dim = env.observation_space.shape
     action_dim = env.action_space.n
@@ -131,7 +137,7 @@ def main():
                               value_lr=model.value_lr)
     agent = Agent(alg, obs_dim, action_dim, args.kl_targ, loss_type=args.loss_type)
 
-    # run a few episodes to initialize scaler
+    # 预热并初始化scaler
     collect_trajectories(env, agent, scaler, episodes=5)
 
     total_steps = 0

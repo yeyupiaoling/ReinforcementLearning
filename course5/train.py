@@ -7,7 +7,7 @@ from collections import defaultdict
 import numpy as np
 import parl
 import retro
-from parl.utils import logger, summary
+from parl.utils import logger, summary, machine_info, get_gpu_count
 from parl.utils.time_stat import TimeStat
 from parl.utils.window_stat import WindowStat
 
@@ -35,12 +35,15 @@ class Learner(object):
         algorithm = parl.algorithms.A3C(model, vf_loss_coeff=config['vf_loss_coeff'])
         self.agent = Agent(algorithm, config)
 
+        # 只支持单个GPU
+        if machine_info.is_gpu_available():
+            assert get_gpu_count() == 1, 'Only support training in single GPU,\
+                    Please set environment variable: `export CUDA_VISIBLE_DEVICES=[GPU_ID_TO_USE]` .'
+
         # 加载预训练模型
         if self.config['restore_model']:
-            self.agent.restore(os.path.join(self.config['model_path'], 'learn_program'), self.agent.learn_program)
-            self.agent.restore(os.path.join(self.config['model_path'], 'predict_program'), self.agent.predict_program)
-            self.agent.restore(os.path.join(self.config['model_path'], 'sample_program'), self.agent.sample_program)
-            self.agent.restore(os.path.join(self.config['model_path'], 'value_program'), self.agent.value_program)
+            logger.info("加载预训练模型...")
+            self.agent.restore(self.config['model_path'])
 
         # 记录训练的日志
         self.total_loss_stat = WindowStat(100)
@@ -49,6 +52,8 @@ class Learner(object):
         self.entropy_stat = WindowStat(100)
         self.lr = None
         self.entropy_coeff = None
+
+        self.best_loss = None
 
         self.learn_time_stat = TimeStat(100)
         self.start_time = None
@@ -149,6 +154,13 @@ class Learner(object):
         # 避免训练还未开始的情况
         if self.start_time is None:
             return
+        # 获取最好的模型
+        if self.best_loss is None:
+            self.best_loss = self.total_loss_stat.mean
+        else:
+            if self.best_loss > self.total_loss_stat.mean:
+                self.best_loss = self.total_loss_stat.mean
+                self.save_model("models_%d" % int(self.best_loss))
         # 训练数据写入到日志中
         summary.add_scalar('total_loss', self.total_loss_stat.mean, self.sample_total_steps)
         summary.add_scalar('pi_loss', self.pi_loss_stat.mean, self.sample_total_steps)
@@ -159,14 +171,14 @@ class Learner(object):
         logger.info('total_loss: {}'.format(self.total_loss_stat.mean))
 
     # 保存模型
-    def save_model(self):
+    def save_model(self, model_name="models"):
         # 避免训练还未开始的情况
         if self.start_time is None:
             return
-
-        if not os.path.exists(self.config['model_path']):
-            os.makedirs(self.config['model_path'])
-        self.agent.save(self.config['model_path'])
+        save_path = os.path.join(self.config['model_path'], model_name)
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        self.agent.save(save_path)
 
     # 检测训练步数是否达到最大步数
     def should_stop(self):
@@ -189,5 +201,6 @@ if __name__ == '__main__':
         if time.time() - start1 > config['save_model_interval_s']:
             start1 = time.time()
             learner.save_model()
+    print("================ 训练结束！================")
     # 最后结束之前保存模型
-    learner.save_model()
+    learner.save_model("final_models")

@@ -41,17 +41,21 @@ class Agent(parl.Agent):
 
         with fluid.program_guard(self.policy_sample_program):
             obs = layers.data(name='obs', shape=self.obs_dim, dtype='float32')
-            sampled_act = self.alg.sample(obs)
-            self.policy_sample_output = [sampled_act]
+            logits = self.alg.sample(obs)
+            policy_dist = CategoricalDistribution(logits)
+            sample_actions = policy_dist.sample()
+            self.policy_sample_output = [sample_actions]
 
         with fluid.program_guard(self.policy_predict_program):
             obs = layers.data(name='obs', shape=self.obs_dim, dtype='float32')
-            means = self.alg.predict(obs)
-            self.policy_predict_output = [means]
+            logits = self.alg.predict(obs)
+            probs = layers.softmax(logits)
+            predict_actions = layers.argmax(probs, 1)
+            self.policy_predict_output = [predict_actions]
 
         with fluid.program_guard(self.policy_learn_program):
             obs = layers.data(name='obs', shape=self.obs_dim, dtype='float32')
-            actions = layers.data(name='actions', shape=[self.act_dim], dtype='float32')
+            actions = layers.data(name='actions', shape=[], dtype='float32')
             advantages = layers.data(name='advantages', shape=[1], dtype='float32')
             if self.loss_type == 'KLPEN':
                 beta = layers.data(name='beta', shape=[], dtype='float32')
@@ -74,20 +78,16 @@ class Agent(parl.Agent):
 
     def policy_sample(self, obs):
         feed = {'obs': obs.astype('float32')}
-        logits = self.fluid_executor.run(program=self.policy_sample_program,
-                                         feed=feed,
-                                         fetch_list=self.policy_sample_output)[0]
-        policy_dist = CategoricalDistribution(logits)
-        sample_actions = policy_dist.sample()
+        sample_actions = self.fluid_executor.run(program=self.policy_sample_program,
+                                                 feed=feed,
+                                                 fetch_list=self.policy_sample_output)
         return sample_actions
 
     def policy_predict(self, obs):
         feed = {'obs': obs.astype('float32')}
-        logits = self.fluid_executor.run(program=self.policy_predict_program,
-                                         feed=feed,
-                                         fetch_list=self.policy_predict_output)[0]
-        probs = layers.softmax(logits)
-        predict_actions = layers.argmax(probs, 1)
+        predict_actions = self.fluid_executor.run(program=self.policy_predict_program,
+                                                  feed=feed,
+                                                  fetch_list=self.policy_predict_output)[0]
         return predict_actions
 
     def value_predict(self, obs):

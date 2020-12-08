@@ -14,6 +14,8 @@ config = {
     'env_num': 10,
     # 每一次执行的游戏步数
     'sample_batch_steps': 20,
+    # 每一次执行的游戏次数
+    'skill_frame': 3,
 
     # ========== 训练模型参数 ==========
     'max_sample_steps': int(1e9),
@@ -28,7 +30,7 @@ config = {
     # 是否加载预训练模型
     'restore_model': False,
     # 模型的保存路径
-    'model_path': 'models/',
+    'model_path': 'models',
     # 保存日志的时间间隔，单位秒
     'log_metrics_interval_s': 10,
     # 保存模型的时间间隔，单位秒

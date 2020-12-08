@@ -18,10 +18,10 @@ class Actor(object):
         # 生成指定数量的游戏环境
         self.envs = []
         for _ in range(config['env_num']):
-            env = retrowrapper.RetroWrapper(game=config['env_name'],
+            env = retrowrapper.RetroWrapper(game=self.config['env_name'],
                                             use_restricted_actions=retro.Actions.DISCRETE,
-                                            skill_frame=3,
-                                            resize_shape=(1, 112, 112),
+                                            skill_frame=self.config['skill_frame'],
+                                            resize_shape=self.config['obs_shape'],
                                             render_preprocess=False,
                                             is_train=True)
             self.envs.append(env)
@@ -31,8 +31,8 @@ class Actor(object):
         self.obs_batch = self.vector_env.reset()
         # 获取每个Actor的模型
         model = Model(self.config['action_dim'])
-        algorithm = parl.algorithms.A3C(model, vf_loss_coeff=config['vf_loss_coeff'])
-        self.agent = Agent(algorithm, config)
+        algorithm = parl.algorithms.A3C(model, vf_loss_coeff=self.config['vf_loss_coeff'])
+        self.agent = Agent(algorithm, self.config)
 
     def sample(self):
         # 全部数据都存放在这里返回
