@@ -18,7 +18,7 @@ def run_train_episode(env, agent, scaler: Scaler):
     scale[-1] = 1.0  # don't scale time step feature
     offset[-1] = 0.0  # don't offset time step feature
     while True:
-        env.render()
+        # env.render()
         # 添加时间特征
         obs = np.concatenate((obs, step), axis=1)
         # 时间步长增量特征
@@ -119,9 +119,9 @@ def build_train_data(trajectories, agent):
 def main():
     env = retro_util.RetroEnv(game='SuperMarioBros-Nes',
                               use_restricted_actions=retro.Actions.DISCRETE,
-                              skill_frame=1,
+                              skill_frame=3,
                               resize_shape=(1, 111, 112),
-                              render_preprocess=True,
+                              render_preprocess=False,
                               is_train=True)
 
     obs_dim = env.observation_space.shape

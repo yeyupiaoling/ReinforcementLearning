@@ -160,7 +160,7 @@ class Learner(object):
         else:
             if self.best_loss > self.total_loss_stat.mean:
                 self.best_loss = self.total_loss_stat.mean
-                self.save_model("models_%d" % int(self.best_loss))
+                self.save_model("model_%d" % int(self.best_loss))
         # 训练数据写入到日志中
         summary.add_scalar('total_loss', self.total_loss_stat.mean, self.sample_total_steps)
         summary.add_scalar('pi_loss', self.pi_loss_stat.mean, self.sample_total_steps)
@@ -171,7 +171,7 @@ class Learner(object):
         logger.info('total_loss: {}'.format(self.total_loss_stat.mean))
 
     # 保存模型
-    def save_model(self, model_name="models"):
+    def save_model(self, model_name="model"):
         # 避免训练还未开始的情况
         if self.start_time is None:
             return
@@ -203,4 +203,4 @@ if __name__ == '__main__':
             learner.save_model()
     print("================ 训练结束！================")
     # 最后结束之前保存模型
-    learner.save_model("final_models")
+    learner.save_model("final_model")

@@ -12,12 +12,11 @@ SAVE_MODEL_PATH = "models"  # 保存模型路径
 
 
 def main():
-    # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小，render_preprocess是否显示预处理后的图像
+    # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小
     env = retro_util.RetroEnv(game=config['env_name'],
                               use_restricted_actions=retro.Actions.DISCRETE,
-                              skill_frame=4,
-                              resize_shape=config['obs_shape'],
-                              render_preprocess=True)
+                              skill_frame=config['skill_frame'],
+                              resize_shape=config['obs_shape'])
     action_dim = env.action_space.n
 
     # 创建模型

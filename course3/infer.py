@@ -13,11 +13,10 @@ SAVE_MODEL_PATH = "models"  # 保存模型路径
 
 
 def main():
-    # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小，render_preprocess是否显示预处理后的图像
+    # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小
     env = retro_util.RetroEnv(game='SuperMarioBros-Nes',
-                              skill_frame=4,
-                              resize_shape=RESIZE_SHAPE,
-                              render_preprocess=False)
+                              skill_frame=3,
+                              resize_shape=RESIZE_SHAPE)
 
     # 游戏的图像形状
     obs_dim = env.observation_space.shape

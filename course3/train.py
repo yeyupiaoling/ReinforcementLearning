@@ -39,7 +39,6 @@ def run_train_episode(env, agent, rpm, render=False):
 
         # 执行游戏
         next_obs, reward, isOver, info = env.step(action)
-        print(info)
 
         # 记录数据
         rpm.append(obs, action, reward, next_obs, isOver)
@@ -131,8 +130,8 @@ def main():
         step_train += 1
 
         # 保存模型
-        if not os.path.exists(os.path.dirname(args.model_path)):
-            os.makedirs(os.path.dirname(args.model_path))
+        if not os.path.exists(args.model_path):
+            os.makedirs(args.model_path)
         agent.save(args.model_path)
 
 
