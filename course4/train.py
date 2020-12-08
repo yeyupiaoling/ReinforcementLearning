@@ -144,6 +144,8 @@ def main():
     print("开始训练...")
     while total_steps < args.train_total_steps:
         trajectories = collect_trajectories(env, agent, scaler, episodes=args.episodes_per_batch)
+        total_steps += sum([t['obs'].shape[0] for t in trajectories])
+        total_train_rewards = sum([np.sum(t['rewards']) for t in trajectories])
 
         train_obs, train_actions, train_advantages, train_discount_sum_rewards = build_train_data(trajectories, agent)
 
@@ -151,7 +153,7 @@ def main():
         value_loss = agent.value_learn(train_obs, train_discount_sum_rewards)
 
         logger.info('Steps {}, Train reward: {}, Policy loss: {}, KL: {}, Value loss: {}'
-                    .format(total_steps, train_discount_sum_rewards, policy_loss, kl, value_loss))
+                    .format(total_steps, total_train_rewards / args.episodes_per_batch, policy_loss, kl, value_loss))
         # if total_steps % 500 == 0:
         #     eval_reward = run_evaluate_episode(env, agent, scaler)
         #     logger.info('Steps {}, Evaluate reward: {}'.format(total_steps, eval_reward))

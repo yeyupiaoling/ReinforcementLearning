@@ -160,7 +160,7 @@ class Learner(object):
         else:
             if self.best_loss > self.total_loss_stat.mean:
                 self.best_loss = self.total_loss_stat.mean
-                self.save_model("model_%d" % int(self.best_loss))
+                self.save_model("model_best")
         # 训练数据写入到日志中
         summary.add_scalar('total_loss', self.total_loss_stat.mean, self.sample_total_steps)
         summary.add_scalar('pi_loss', self.pi_loss_stat.mean, self.sample_total_steps)
