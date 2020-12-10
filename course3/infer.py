@@ -8,6 +8,7 @@ ACTOR_LR = 1e-4  # actor模型的学习率
 CRITIC_LR = 1e-4  # critic模型的学习速率
 GAMMA = 0.99  # 奖励系数
 TAU = 0.005  # 衰减参数
+SKILL_FRAME = 4  # 每次执行多少帧
 RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小
 SAVE_MODEL_PATH = "models"  # 保存模型路径
 
@@ -15,7 +16,9 @@ SAVE_MODEL_PATH = "models"  # 保存模型路径
 def main():
     # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小
     env = retro_util.RetroEnv(game='SuperMarioBros-Nes',
+                              skill_frame=SKILL_FRAME,
                               resize_shape=RESIZE_SHAPE)
+    env.seed(1)
 
     # 游戏的图像形状
     obs_dim = env.observation_space.shape

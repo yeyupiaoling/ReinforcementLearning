@@ -13,20 +13,15 @@ from scaler import Scaler
 def run_train_episode(env, agent, scaler: Scaler):
     obs = env.reset()
     observes, actions, rewards, unscaled_obs = [], [], [], []
-    step = np.zeros((1, 1, 112), dtype=np.float32)
     scale, offset = scaler.get()
     scale[-1] = 1.0  # don't scale time step feature
     offset[-1] = 0.0  # don't offset time step feature
     while True:
-        env.render()
-        # 添加时间特征
-        obs = np.concatenate((obs, step), axis=1)
-        # 时间步长增量特征
-        step += 1e-3
+        # env.render()
         obs = np.expand_dims(obs, axis=0)
         unscaled_obs.append(obs)
         # 中心和比例尺观测
-        obs = (obs - offset) * scale
+        # obs = (obs - offset) * scale
         obs = obs.astype('float32')
         observes.append(obs)
 
@@ -55,7 +50,7 @@ def run_evaluate_episode(env, agent, scaler):
     scale[-1] = 1.0  # don't scale time step feature
     offset[-1] = 0.0  # don't offset time step feature
     while True:
-        env.render()
+        # env.render()
         obs = obs.reshape((1, -1))
         obs = np.append(obs, [[step]], axis=1)  # add time step feature
         obs = (obs - offset) * scale  # center and scale observations
@@ -118,14 +113,13 @@ def build_train_data(trajectories, agent):
 def main():
     env = retro_util.RetroEnv(game='SuperMarioBros-Nes',
                               use_restricted_actions=retro.Actions.DISCRETE,
-                              skill_frame=3,
-                              resize_shape=(1, 111, 112),
+                              skill_frame=4,
+                              resize_shape=(1, 112, 112),
                               render_preprocess=False,
                               is_train=True)
 
     obs_dim = env.observation_space.shape
     action_dim = env.action_space.n
-    obs_dim = (1, 112, 112)  # add 1 to obs dim for time step feature
 
     scaler = Scaler(obs_dim)
 
@@ -180,7 +174,7 @@ if __name__ == "__main__":
                         default='CLIP')
     parser.add_argument('--train_total_steps',
                         type=int,
-                        default=int(1e7),
+                        default=int(1e9),
                         help='maximum training steps')
     parser.add_argument('--test_every_steps',
                         type=int,

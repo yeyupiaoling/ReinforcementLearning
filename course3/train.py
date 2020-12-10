@@ -14,13 +14,14 @@ TAU = 0.005  # 衰减参数
 MEMORY_SIZE = int(1e5)  # 内存记忆大小
 WARMUP_SIZE = 1e4  # 热身大小
 BATCH_SIZE = 32  # batch大小
-ENV_SEED = 1  # 固定随机情况
+SKILL_FRAME = 4  # 每次执行多少帧
 RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小，减少模型计算，原大小（224,240）
 
 
 # 训练模型
 def run_train_episode(env, agent, rpm, render=False):
-    obs = env.reset()
+    # 获取最后一帧图像
+    obs = env.reset()[None, -1, :, :]
     total_reward = 0
     steps = 0
     while True:
@@ -39,6 +40,8 @@ def run_train_episode(env, agent, rpm, render=False):
 
         # 执行游戏
         next_obs, reward, isOver, info = env.step(action)
+        # 获取最后一帧图像
+        next_obs = next_obs[None, -1, :, :]
 
         # 记录数据
         rpm.append(obs, action, reward, next_obs, isOver)
@@ -58,7 +61,8 @@ def run_train_episode(env, agent, rpm, render=False):
 
 # 评估模型
 def run_evaluate_episode(env, agent, render=False):
-    obs = env.reset()
+    # 获取最后一帧图像
+    obs = env.reset()[None, -1, :, :]
     total_reward = 0
     while True:
         if render:
@@ -70,7 +74,9 @@ def run_evaluate_episode(env, agent, render=False):
         action = [0 if a < 0 else 1 for a in action]
         # 执行游戏
         next_obs, reward, isOver, info = env.step(action)
-        obs = next_obs
+        total_reward += reward
+        # 获取最后一帧图像
+        obs = next_obs[None, -1, :, :]
 
         if isOver:
             break
@@ -81,12 +87,13 @@ def main():
     # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小，render_preprocess是否显示预处理后的图像
     env = retro_util.RetroEnv(game=args.env,
                               resize_shape=RESIZE_SHAPE,
+                              skill_frame=SKILL_FRAME,
                               render_preprocess=args.show_play,
                               is_train=True)
-    env.seed(ENV_SEED)
+    env.seed(1)
 
     # 游戏的图像形状
-    obs_dim = env.observation_space.shape
+    obs_dim = RESIZE_SHAPE
     # 动作维度
     action_dim = env.action_space.n
     # 动作正负的最大绝对值

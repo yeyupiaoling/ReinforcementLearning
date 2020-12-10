@@ -1,5 +1,3 @@
-import random
-
 import cv2
 import retro
 import numpy as np
@@ -18,8 +16,9 @@ class RetroEnv(retro.RetroEnv):
         self.skill_frame = skill_frame
         self.is_train = is_train
         self.render_preprocess = render_preprocess
-        self.observation_space.shape = resize_shape
+        self.observation_space.shape = (self.skill_frame, resize_shape[1], resize_shape[2])
         self.game_info = None
+        self.obses = np.zeros(self.observation_space.shape, dtype=np.float32)
         self.use_restricted_actions = use_restricted_actions
         if self.game == 'SuperMarioBros-Nes':
             # 最后3个动作才是有效的
@@ -49,10 +48,19 @@ class RetroEnv(retro.RetroEnv):
         # 对输入的动作处理成真实游戏动作
         action = self.preprocess_action(a)
         total_reward = 0
+        last_states = []
+        terminal = False
+        info = {}
         # 每一次支持多个帧，让模型看到操作效果
-        for _ in range(self.skill_frame):
+        for i in range(self.skill_frame):
             obs, reward, terminal, info = super(RetroEnv, self).step(action)
+            # 记录所有步数的总分
             total_reward += reward
+            # 取中间帧
+            if i >= self.skill_frame / 2 or self.skill_frame == 1:
+                # 图像预处理
+                obs = self.preprocess(obs, self.render_preprocess)
+                last_states.append(obs)
             if terminal:
                 break
 
@@ -79,14 +87,21 @@ class RetroEnv(retro.RetroEnv):
                     total_reward = -10
                     terminal = True
             self.game_info = info
-        # 图像预处理
-        obs = self.preprocess(obs, self.render_preprocess)
-        return obs, total_reward, terminal, info
+        if not terminal:
+            # 将两帧图片拼接起来
+            max_state = np.max(np.concatenate(last_states, 0), 0)
+            # 指定前面三帧都是上三个的
+            self.obses[:-1] = self.obses[1:]
+            # 最后一个指定为当前的游戏帧
+            self.obses[-1] = max_state
+        return self.obses, total_reward, terminal, info
 
     def reset(self):
         obs = super(RetroEnv, self).reset()
+        self.obses = np.zeros(self.observation_space.shape, dtype=np.float32)
         obs = self.preprocess(obs, self.render_preprocess)
-        return obs
+        self.obses[:-1] = obs
+        return self.obses
 
     # 图像预处理
     def preprocess(self, observation, render=False):

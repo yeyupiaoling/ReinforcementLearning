@@ -1,7 +1,6 @@
 import cv2
 import retro
 import numpy as np
-from gym.spaces import Box
 
 
 class RetroEnv(retro.RetroEnv):

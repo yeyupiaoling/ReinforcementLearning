@@ -1,5 +1,4 @@
 import time
-
 import retro_util
 import cv2
 import numpy as np
@@ -19,6 +18,7 @@ def main():
         action = env.action_space.sample()
         # 执行游戏
         obs, reward, terminal, info = env.step(action)
+        # 显示连续动作
         obses = obs[0]
         for i in range(1, obs.shape[0]):
             obses = np.hstack([obses, obs[i]])
