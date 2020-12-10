@@ -15,7 +15,7 @@ config = {
     # 每一次执行的游戏步数
     'sample_batch_steps': 20,
     # 每一次执行的游戏次数
-    'skill_frame': 3,
+    'skill_frame': 4,
 
     # ========== 训练模型参数 ==========
     'max_sample_steps': int(1e9),
