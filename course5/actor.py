@@ -29,10 +29,11 @@ class Actor(object):
         self.vector_env = VectorEnv(self.envs)
         # 获取全部环境的初始界面
         self.obs_batch = self.vector_env.reset()
+        self.obs_dim = env.observation_space.shape
         # 获取每个Actor的模型
         model = Model(self.config['action_dim'])
         algorithm = parl.algorithms.A3C(model, vf_loss_coeff=self.config['vf_loss_coeff'])
-        self.agent = Agent(algorithm, self.config)
+        self.agent = Agent(algorithm, self.config, self.obs_dim)
 
     def sample(self):
         # 全部数据都存放在这里返回

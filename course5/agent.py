@@ -6,14 +6,14 @@ from parl.utils.scheduler import PiecewiseScheduler, LinearDecayScheduler
 
 
 class Agent(parl.Agent):
-    def __init__(self, algorithm, config):
+    def __init__(self, algorithm, config, obs_dim):
         """
         Args:
             algorithm (`parl.Algorithm`): 强学习算法
             config (dict): 配置文件参数
         """
 
-        self.obs_shape = config['obs_shape']
+        self.obs_dim = obs_dim
         super(Agent, self).__init__(algorithm)
         # 学习率衰减
         self.lr_scheduler = LinearDecayScheduler(config['start_lr'], config['max_sample_steps'])
@@ -29,22 +29,22 @@ class Agent(parl.Agent):
 
         # 给Actor生成数据的程序
         with fluid.program_guard(self.sample_program):
-            obs = layers.data(name='obs', shape=self.obs_shape, dtype='float32')
+            obs = layers.data(name='obs', shape=self.obs_dim, dtype='float32')
             sample_actions, values = self.alg.sample(obs)
             self.sample_outputs = [sample_actions, values]
 
         # 用于预测的程序
         with fluid.program_guard(self.predict_program):
-            obs = layers.data(name='obs', shape=self.obs_shape, dtype='float32')
+            obs = layers.data(name='obs', shape=self.obs_dim, dtype='float32')
             self.predict_actions = self.alg.predict(obs)
 
         with fluid.program_guard(self.value_program):
-            obs = layers.data(name='obs', shape=self.obs_shape, dtype='float32')
+            obs = layers.data(name='obs', shape=self.obs_dim, dtype='float32')
             self.values = self.alg.value(obs)
 
         # 用于训练的程序
         with fluid.program_guard(self.learn_program):
-            obs = layers.data(name='obs', shape=self.obs_shape, dtype='float32')
+            obs = layers.data(name='obs', shape=self.obs_dim, dtype='float32')
             actions = layers.data(name='actions', shape=[], dtype='int64')
             advantages = layers.data(name='advantages', shape=[], dtype='float32')
             target_values = layers.data(name='target_values', shape=[], dtype='float32')

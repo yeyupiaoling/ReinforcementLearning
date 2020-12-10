@@ -27,13 +27,14 @@ class Learner(object):
                                   use_restricted_actions=retro.Actions.DISCRETE,
                                   resize_shape=config['obs_shape'],
                                   render_preprocess=False)
+        obs_dim = env.observation_space.shape
         action_dim = env.action_space.n
         self.config['action_dim'] = action_dim
 
         # 这里创建的模型是真正学习使用的
         model = Model(action_dim)
         algorithm = parl.algorithms.A3C(model, vf_loss_coeff=config['vf_loss_coeff'])
-        self.agent = Agent(algorithm, config)
+        self.agent = Agent(algorithm, config, obs_dim)
 
         # 只支持单个GPU
         if machine_info.is_gpu_available():
