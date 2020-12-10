@@ -109,7 +109,6 @@ def main():
         logger.info("加载预训练模型...")
         agent.restore(args.model_path)
 
-    print("预热数据。。。")
     # 创建记录数据存储器
     rpm = ReplayMemory(MEMORY_SIZE, obs_dim, action_dim)
 
@@ -148,7 +147,7 @@ if __name__ == '__main__':
                         help='maximum training steps')
     parser.add_argument('--show_play',
                         type=bool,
-                        default=True,
+                        default=False,
                         help='if show game play')
     parser.add_argument('--model_path',
                         type=str,
