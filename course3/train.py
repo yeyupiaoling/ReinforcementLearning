@@ -80,7 +80,6 @@ def run_evaluate_episode(env, agent, render=False):
 def main():
     # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小，render_preprocess是否显示预处理后的图像
     env = retro_util.RetroEnv(game=args.env,
-                              skill_frame=3,
                               resize_shape=RESIZE_SHAPE,
                               render_preprocess=args.show_play,
                               is_train=True)
@@ -110,11 +109,13 @@ def main():
         logger.info("加载预训练模型...")
         agent.restore(args.model_path)
 
+    print("预热数据。。。")
     # 创建记录数据存储器
     rpm = ReplayMemory(MEMORY_SIZE, obs_dim, action_dim)
 
     total_steps = 0
     step_train = 0
+    print("开始训练模型。。。")
     while total_steps < args.train_total_steps:
         # 训练
         train_reward, steps = run_train_episode(env, agent, rpm, render=args.show_play)
@@ -143,11 +144,11 @@ if __name__ == '__main__':
                         help='Nes environment name')
     parser.add_argument('--train_total_steps',
                         type=int,
-                        default=int(1e7),
+                        default=int(1e9),
                         help='maximum training steps')
     parser.add_argument('--show_play',
                         type=bool,
-                        default=False,
+                        default=True,
                         help='if show game play')
     parser.add_argument('--model_path',
                         type=str,

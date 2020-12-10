@@ -15,7 +15,6 @@ SAVE_MODEL_PATH = "models"  # 保存模型路径
 def main():
     # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小
     env = retro_util.RetroEnv(game='SuperMarioBros-Nes',
-                              skill_frame=3,
                               resize_shape=RESIZE_SHAPE)
 
     # 游戏的图像形状
@@ -53,6 +52,9 @@ def main():
         print('执行动作：', action)
         obs, reward, isOver, info = env.step(action)
         total_reward += reward
+        if info['lives'] != 2:
+            isOver = True
+    env.render(close=True)
     env.close()
     print("最终得分为：{:.2f}".format(total_reward))
 

@@ -18,7 +18,7 @@ def run_train_episode(env, agent, scaler: Scaler):
     scale[-1] = 1.0  # don't scale time step feature
     offset[-1] = 0.0  # don't offset time step feature
     while True:
-        # env.render()
+        env.render()
         # 添加时间特征
         obs = np.concatenate((obs, step), axis=1)
         # 时间步长增量特征
@@ -37,7 +37,6 @@ def run_train_episode(env, agent, scaler: Scaler):
 
         # 执行游戏
         obs, reward, isOver, info = env.step(action)
-        print(info)
 
         rewards.append(reward)
 
@@ -174,7 +173,7 @@ if __name__ == "__main__":
     parser.add_argument('--episodes_per_batch',
                         type=int,
                         help='Number of episodes per training batch',
-                        default=5)
+                        default=1)
     parser.add_argument('--loss_type',
                         type=str,
                         help="Choose loss type of PPO algorithm, 'CLIP' or 'KLPEN'",

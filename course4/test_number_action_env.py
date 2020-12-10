@@ -6,7 +6,6 @@ def main():
     # 获取游戏
     env = retro_util.RetroEnv(game='SuperMarioBros-Nes',
                               use_restricted_actions=retro.Actions.DISCRETE,
-                              skill_frame=1,
                               resize_shape=(1, 112, 112),
                               render_preprocess=True)
     obs = env.reset()

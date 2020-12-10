@@ -38,6 +38,7 @@ def main():
         action = agent.predict(obs)[0]
         obs, reward, isOver, info = env.step(action)
         total_reward += reward
+    env.render(close=True)
     env.close()
     print("最终得分为：{:.2f}".format(total_reward))
 
