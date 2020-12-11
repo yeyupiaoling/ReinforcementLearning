@@ -1,4 +1,6 @@
 import argparse
+import os
+
 import retro_util
 import numpy as np
 import parl
@@ -45,24 +47,20 @@ def run_train_episode(env, agent, scaler: Scaler):
 def run_evaluate_episode(env, agent, scaler):
     obs = env.reset()
     rewards = []
-    step = 0.0
     scale, offset = scaler.get()
     scale[-1] = 1.0  # don't scale time step feature
     offset[-1] = 0.0  # don't offset time step feature
     while True:
-        # env.render()
-        obs = obs.reshape((1, -1))
-        obs = np.append(obs, [[step]], axis=1)  # add time step feature
-        obs = (obs - offset) * scale  # center and scale observations
-        obs = obs.astype('float32')
+        env.render()
+        obs = np.expand_dims(obs, axis=0)
+        # obs = (obs - offset) * scale  # center and scale observations
 
         action = agent.policy_predict(obs)
         obs, reward, done, _ = env.step(np.squeeze(action))
         rewards.append(reward)
 
-        step += 1e-3  # increment time step feature
-
         if done:
+            env.render(close=True)
             break
     return np.sum(rewards)
 
@@ -123,7 +121,7 @@ def main():
 
     scaler = Scaler(obs_dim)
 
-    model = Model(obs_dim, action_dim)
+    model = Model(obs_dim, action_dim, policy_lr=1e-5, value_lr=1e-5)
     alg = parl.algorithms.PPO(model=model,
                               act_dim=action_dim,
                               policy_lr=model.policy_lr,
@@ -134,6 +132,7 @@ def main():
     collect_trajectories(env, agent, scaler, episodes=5)
 
     total_steps = 0
+    train_step = 0
     print("开始训练...")
     while total_steps < args.train_total_steps:
         trajectories = collect_trajectories(env, agent, scaler, episodes=args.episodes_per_batch)
@@ -147,9 +146,15 @@ def main():
 
         logger.info('Steps {}, Train reward: {}, Policy loss: {}, KL: {}, Value loss: {}'
                     .format(total_steps, total_train_rewards / args.episodes_per_batch, policy_loss, kl, value_loss))
-        # if total_steps % 500 == 0:
-        #     eval_reward = run_evaluate_episode(env, agent, scaler)
-        #     logger.info('Steps {}, Evaluate reward: {}'.format(total_steps, eval_reward))
+
+        if train_step % 10 == 0:
+            eval_reward = run_evaluate_episode(env, agent, scaler)
+            logger.info('Steps {}, Evaluate reward: {}'.format(total_steps, eval_reward))
+            # 保存模型
+            if not os.path.exists(args.model_path):
+                os.makedirs(args.model_path)
+            agent.save(args.model_path)
+        train_step += 1
 
 
 if __name__ == "__main__":
@@ -180,6 +185,10 @@ if __name__ == "__main__":
                         type=int,
                         default=int(1e4),
                         help='the step interval between two consecutive evaluations')
+    parser.add_argument('--model_path',
+                        type=str,
+                        default='models',
+                        help='save model path')
 
     args = parser.parse_args()
 

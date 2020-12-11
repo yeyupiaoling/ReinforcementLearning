@@ -17,12 +17,13 @@ def main():
                               use_restricted_actions=retro.Actions.DISCRETE,
                               skill_frame=config['skill_frame'],
                               resize_shape=config['obs_shape'])
+    obs_dim = env.observation_space.shape
     action_dim = env.action_space.n
 
     # 创建模型
     model = Model(action_dim)
     algorithm = parl.algorithms.A3C(model, vf_loss_coeff=config['vf_loss_coeff'])
-    agent = Agent(algorithm, config)
+    agent = Agent(algorithm, config, obs_dim)
 
     # 加载模型
     agent.restore(config['model_path'])

@@ -21,7 +21,8 @@ def main():
     env.seed(1)
 
     # 游戏的图像形状
-    obs_dim = env.observation_space.shape
+    # obs_dim = env.observation_space.shape
+    obs_dim = RESIZE_SHAPE
     # 动作维度
     action_dim = env.action_space.n
     # 动作正负的最大绝对值
@@ -43,7 +44,7 @@ def main():
     agent.restore(SAVE_MODEL_PATH)
 
     # 开始游戏
-    obs = env.reset()
+    obs = env.reset()[None, -1, :, :]
     total_reward = 0
     isOver = False
     # 游戏未结束执行一直执行游戏
@@ -53,7 +54,7 @@ def main():
         action = agent.predict(obs)
         action = [0 if a < 0 else 1 for a in action]
         print('执行动作：', action)
-        obs, reward, isOver, info = env.step(action)
+        obs, reward, isOver, info = env.step_sac(action)
         total_reward += reward
         if info['lives'] != 2:
             isOver = True

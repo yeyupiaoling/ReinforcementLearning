@@ -21,7 +21,7 @@ RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小，减少模型计算，原
 # 训练模型
 def run_train_episode(env, agent, rpm, render=False):
     # 获取最后一帧图像
-    obs = env.reset()
+    obs = env.reset()[None, -1, :, :]
     total_reward = 0
     steps = 0
     while True:
@@ -39,7 +39,7 @@ def run_train_episode(env, agent, rpm, render=False):
             action = [0 if a < 0 else 1 for a in action]
 
         # 执行游戏
-        next_obs, reward, isOver, info = env.step(action)
+        next_obs, reward, isOver, info = env.step_sac(action)
         # 获取最后一帧图像
         next_obs = next_obs
 
@@ -55,6 +55,8 @@ def run_train_episode(env, agent, rpm, render=False):
         total_reward += reward
 
         if isOver:
+            if render:
+                env.render(close=True)
             break
     return total_reward, steps
 
@@ -62,7 +64,7 @@ def run_train_episode(env, agent, rpm, render=False):
 # 评估模型
 def run_evaluate_episode(env, agent, render=False):
     # 获取最后一帧图像
-    obs = env.reset()
+    obs = env.reset()[None, -1, :, :]
     total_reward = 0
     while True:
         if render:
@@ -73,12 +75,14 @@ def run_evaluate_episode(env, agent, render=False):
         # 获取动作
         action = [0 if a < 0 else 1 for a in action]
         # 执行游戏
-        next_obs, reward, isOver, info = env.step(action)
+        next_obs, reward, isOver, info = env.step_sac(action)
         total_reward += reward
         # 获取最后一帧图像
         obs = next_obs
 
         if isOver:
+            if render:
+                env.render(close=True)
             break
     return total_reward
 
@@ -93,7 +97,8 @@ def main():
     env.seed(1)
 
     # 游戏的图像形状
-    obs_dim = env.observation_space.shape
+    # obs_dim = env.observation_space.shape
+    obs_dim = RESIZE_SHAPE
     # 动作维度
     action_dim = env.action_space.n
     # 动作正负的最大绝对值
