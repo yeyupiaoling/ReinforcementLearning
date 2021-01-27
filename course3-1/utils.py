@@ -15,7 +15,7 @@ def eval(args, num_states, num_actions):
     paddle.seed(123)
     # 使用 GPU预测
     if paddle.is_compiled_with_cuda():
-        paddle.set_device("gpu:1")
+        paddle.set_device("gpu:0")
     # 判断游戏动作类型
     if args.action_type == "right":
         actions = RIGHT_ONLY

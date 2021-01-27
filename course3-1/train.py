@@ -38,7 +38,7 @@ def get_args():
 def train(args):
     # 使用 GPU训练
     if paddle.is_compiled_with_cuda():
-        paddle.set_device("gpu:1")
+        paddle.set_device("gpu:0")
     # 创建多进程的游戏环境
     envs = MultipleEnvironments(args.world, args.stage, args.action_type, args.num_processes)
     # 固定初始化状态
