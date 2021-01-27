@@ -15,7 +15,7 @@ def eval(args, num_states, num_actions):
     paddle.seed(123)
     # 使用 GPU预测
     if paddle.is_compiled_with_cuda():
-        paddle.set_device("gpu:0")
+        paddle.set_device("gpu:1")
     # 判断游戏动作类型
     if args.action_type == "right":
         actions = RIGHT_ONLY
@@ -76,3 +76,10 @@ def eval(args, num_states, num_actions):
             state = env.reset()
         # 转换每一步都游戏状态
         state = paddle.to_tensor(state, dtype="float32")
+
+
+def print_arguments(args):
+    print("-----------  Configuration Arguments -----------")
+    for arg, value in sorted(vars(args).items()):
+        print("%s: %s" % (arg, value))
+    print("------------------------------------------------")

@@ -59,7 +59,7 @@ class GameState:
         self.obs_shape = (SCREENWIDTH, SCREENHEIGHT, 3)
         self.action_dim = 2
 
-    def step(self, action, is_train=False):
+    def step(self, action, is_train=True):
         pygame.event.pump()
 
         reward = 0.1

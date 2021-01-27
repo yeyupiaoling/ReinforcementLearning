@@ -36,6 +36,8 @@ def evaluate():
     total_reward = 0
     state = env.reset()
     while True:
+        # 显示游戏图像
+        env.render()
         state = paddle.to_tensor(state, dtype='float32')
         action = targetQ(state)
         action = paddle.argmax(action).numpy()[0]
@@ -58,7 +60,7 @@ def train():
     while True:
         # 显示游戏图像
         env.render()
-        # 使用贪心算法获取游戏动作的来源
+        # 使用贪心策略获取游戏动作的来源
         e_greed = max(0.01, e_greed - e_greed_decrement)
         if np.random.rand() < e_greed:
             # 随机生成动作

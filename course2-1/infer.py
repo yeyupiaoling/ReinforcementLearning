@@ -47,7 +47,7 @@ def main():
         obs = paddle.to_tensor(obs, dtype='float32')
         action = model(obs)
         action = paddle.argmax(action).numpy()[0]
-        obs, reward, done, info = env.step(action)
+        obs, reward, done, info = env.step(action, is_train=False)
         episode_reward += reward
     print("最终得分为：{:.2f}".format(episode_reward))
 

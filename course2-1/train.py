@@ -84,7 +84,7 @@ def train():
     obs = preprocess(obs)
 
     while True:
-        # 使用贪心算法获取游戏动作的来源
+        # 使用贪心策略获取游戏动作的来源
         e_greed = max(0.01, e_greed - e_greed_decrement)
         if np.random.rand() < e_greed:
             # 随机生成动作
