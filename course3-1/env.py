@@ -81,7 +81,7 @@ class CustomSkipFrame(Wrapper):
         self.states[:-1] = self.states[1:]
         # 最后一个指定为当前的游戏帧
         self.states[-1] = max_state
-        return self.states[None, :, :, :].astype(np.float32), total_reward, done, info
+        return self.states[None, :, :, :].astype(np.float32), round(total_reward, 2), done, info
 
     # 重置游戏状态
     def reset(self):

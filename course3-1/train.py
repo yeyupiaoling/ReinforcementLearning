@@ -10,6 +10,7 @@ from utils import eval, print_arguments
 from paddle.distribution import Categorical
 import paddle.nn.functional as F
 import numpy as np
+from visualdl import LogWriter
 
 
 def get_args():
@@ -26,7 +27,7 @@ def get_args():
     parser.add_argument('--num_epochs',       type=int,   default=10)
     parser.add_argument("--num_local_steps",  type=int,   default=512)
     parser.add_argument("--num_global_steps", type=int,   default=5e6)
-    parser.add_argument("--num_processes",    type=int,   default=8)
+    parser.add_argument("--num_processes",    type=int,   default=16)
     parser.add_argument("--save_interval",    type=int,   default=50,  help="Number of steps between savings")
     parser.add_argument("--max_actions",      type=int,   default=200, help="Maximum repetition steps in test phase")
     parser.add_argument("--saved_path",       type=str,   default="models")
@@ -39,6 +40,7 @@ def train(args):
     # 使用 GPU训练
     if paddle.is_compiled_with_cuda():
         paddle.set_device("gpu:0")
+    log_writer = LogWriter(logdir='log')
     # 创建多进程的游戏环境
     envs = MultipleEnvironments(args.world, args.stage, args.action_type, args.num_processes)
     # 固定初始化状态
@@ -105,7 +107,7 @@ def train(args):
         gae = 0
         R = []
         for value, reward, done in list(zip(values, rewards, dones))[::-1]:
-            gae = paddle.to_tensor(gae * args.gamma * args.tau, dtype='float32')
+            gae = gae * args.gamma * args.tau
             gae = gae + reward + args.gamma * next_value.detach() * (1 - done) - value.detach()
             next_value = value
             R.append(gae + value)
@@ -131,12 +133,6 @@ def train(args):
                 actor_loss = paddle.to_tensor(ratio * advantages + actor_loss, dtype='float32')
                 actor_loss = -paddle.mean(paddle.min(actor_loss, axis=0))
 
-                # ratio = paddle.exp(new_log_policy - paddle.gather(old_log_policies, batch_indices))
-                # advantages = paddle.gather(advantages, batch_indices)
-                # actor_loss = paddle.to_tensor(list((ratio * advantages).numpy().astype("float32") +
-                #                     (paddle.clip(ratio, 1.0 - args.epsilon, 1.0 + args.epsilon) * advantages).numpy().astype("float32")), dtype="float32")
-                # actor_loss = -paddle.mean(paddle.min(actor_loss, axis=0))
-
                 # 计算critic损失
                 critic_loss = F.smooth_l1_loss(paddle.gather(R, batch_indices), value.squeeze())
                 entropy_loss = paddle.mean(new_m.entropy())
@@ -145,11 +141,10 @@ def train(args):
                 # 计算梯度
                 optimizer.clear_grad()
                 total_loss.backward()
-                # for parameter in model.parameters():
-                #     paddle.nn.clip_by_norm(parameter, 0.5)
                 optimizer.step()
             paddle.save(model.state_dict(), "{}/model_{}_{}.pdparams".format(args.saved_path, args.world, args.stage))
         print("Episode: {}. Total loss: {:.4f}".format(curr_episode, total_loss.numpy()[0]))
+        log_writer.add_scalar(tag='Total loss', value=total_loss.numpy()[0], step=curr_episode)
 
 
 if __name__ == "__main__":

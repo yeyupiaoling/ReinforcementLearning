@@ -45,7 +45,6 @@ def eval(args, num_states, num_actions):
                 model_dict = paddle.load("{}/model_{}_{}.pdparams".format(args.saved_path, args.world, args.stage))
             except:
                 continue
-            print('总得分是：%f' % total_reward)
             total_reward = 0
             # local_model.load_dict(model.state_dict())
             local_model.load_dict(model_dict)
@@ -74,6 +73,7 @@ def eval(args, num_states, num_actions):
             curr_step = 0
             actions.clear()
             state = env.reset()
+            print('总得分是：%f' % total_reward)
         # 转换每一步都游戏状态
         state = paddle.to_tensor(state, dtype="float32")
 
