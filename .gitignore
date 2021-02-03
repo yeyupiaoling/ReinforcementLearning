@@ -2,11 +2,8 @@
 __pycache__/
 *.py[cod]
 roms/
-course2/models/
-course2-1/models/
-course3/models
-course3-1/models
-course3/train_log
+DQN-FlappyBird/models
+PPO-SuperMarioBros/models
 course4/models
 course5/models
 course5/train_log

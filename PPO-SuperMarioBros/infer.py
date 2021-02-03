@@ -45,8 +45,6 @@ def infer(args):
     # 获取刚开始的游戏图像
     state = paddle.to_tensor(env.reset(), dtype="float32")
     total_reward = 0
-    env.render()
-    i = input()
     while True:
         # 显示界面
         env.render()

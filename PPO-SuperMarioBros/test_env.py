@@ -1,6 +1,7 @@
 
 from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
-
+import numpy as np
+import cv2
 from env import create_train_env
 
 
@@ -18,6 +19,12 @@ def main():
         action = env.action_space.sample()
         # 执行游戏
         obs, reward, terminal, info = env.step(action)
+        obs = np.squeeze(obs)
+        obses = obs[0]
+        for i in range(1, obs.shape[0]):
+            print(obs[i].shape)
+            obses = np.hstack([obses, obs[i]])
+        cv2.imshow('obes', obses)
         env.render()
         print("=" * 50)
         print("action:", action)
