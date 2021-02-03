@@ -1,12 +1,12 @@
 import cv2
 import numpy as np
-import parl
+import paddle
+
 import flappy_bird.wrapped_flappy_bird as flappyBird
-from agent import Agent
 from model import Model
 
-RESIZE_SHAPE = (1, 224, 224)  # 训练缩放的大小
-SAVE_MODEL_PATH = "models/model.ckpt"  # 保存模型路径
+resize_shape = (1, 224, 224)  # 训练缩放的大小
+save_model_path = "models/model.ckpt"  # 保存模型路径
 
 
 # 图像预处理
@@ -14,7 +14,7 @@ def preprocess(observation):
     # 裁剪图像
     observation = observation[:observation.shape[0]-100, :]
     # 缩放图像
-    observation = cv2.resize(observation, (RESIZE_SHAPE[1], RESIZE_SHAPE[2]))
+    observation = cv2.resize(observation, (resize_shape[1], resize_shape[2]))
     # 把图像转成灰度图
     observation = cv2.cvtColor(observation, cv2.COLOR_BGR2GRAY)
     # 图像转换成非黑即白的图像
@@ -27,29 +27,27 @@ def preprocess(observation):
 def main():
     # 初始化游戏
     env = flappyBird.GameState()
-
-    # 动作维度
+    # 图像输入形状和动作维度
+    obs_dim = resize_shape[0]
     action_dim = env.action_dim
 
     # 创建模型
-    model = Model(act_dim=action_dim)
-    algorithm = parl.algorithms.DQN(model, act_dim=action_dim, gamma=0.99, lr=0.0005)
-    agent = Agent(algorithm=algorithm,
-                  obs_dim=RESIZE_SHAPE,
-                  action_dim=action_dim)
-
-    # 加载模型
-    agent.restore(SAVE_MODEL_PATH)
+    model = Model(obs_dim, action_dim)
+    model.load_dict(paddle.load(save_model_path))
+    model.eval()
 
     # 开始游戏
     obs = env.reset()
     episode_reward = 0
-    isOver = False
+    done = False
     # 游戏未结束执行一直执行游戏
-    while not isOver:
+    while not done:
         obs = preprocess(obs)
-        action = agent.predict(obs)
-        obs, reward, isOver, info = env.step(action)
+        obs = np.expand_dims(obs, axis=0)
+        obs = paddle.to_tensor(obs, dtype='float32')
+        action = model(obs)
+        action = paddle.argmax(action).numpy()[0]
+        obs, reward, done, info = env.step(action, is_train=False)
         episode_reward += reward
     print("最终得分为：{:.2f}".format(episode_reward))
 

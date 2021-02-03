@@ -96,6 +96,46 @@ class RetroEnv(retro.RetroEnv):
             self.obses[-1] = max_state
         return self.obses, total_reward, terminal, info
 
+    def step_sac(self, a):
+        # 对输入的动作处理成真实游戏动作
+        action = self.preprocess_action(a)
+        total_reward = 0
+        terminal = False
+        info = {}
+        # 每一次支持多个帧，让模型看到操作效果
+        for i in range(self.skill_frame):
+            obs, reward, terminal, info = super(RetroEnv, self).step(action)
+            # 记录所有步数的总分
+            total_reward += reward
+            obs = self.preprocess(obs, self.render_preprocess)
+            if terminal:
+                break
+
+        if self.game_info is None:
+            self.game_info = info
+        # 超级马里奥奖励处理
+        if self.game == 'SuperMarioBros-Nes':
+            total_reward = 0
+            # 经过一个画面归零
+            if info['xscrollHi'] > self.game_info['xscrollHi']:
+                self.game_info['xscrollLo'] = self.game_info['xscrollLo'] - 250
+            # 向前移动奖励
+            total_reward += info['xscrollLo'] - self.game_info['xscrollLo']
+            # 记录得到的分数
+            total_reward += (info['score'] - self.game_info['score']) * 0.1
+            # 通关奖励
+            total_reward += (info['levelHi'] - self.game_info['levelHi']) * 100
+            # 通一关就结束
+            if info['levelHi'] > self.game_info['levelHi']:
+                terminal = True
+            # 如何在训练的情况下，死一次就结束游戏
+            if self.is_train:
+                if info['lives'] != 2:
+                    total_reward = -10
+                    terminal = True
+            self.game_info = info
+        return obs, total_reward, terminal, info
+
     def reset(self):
         obs = super(RetroEnv, self).reset()
         self.obses = np.zeros(self.observation_space.shape, dtype=np.float32)

@@ -1,24 +1,31 @@
-import parl
-from parl import layers
+import paddle.nn as nn
+import paddle.nn.functional as F
 
 
-class Model(parl.Model):
-    def __init__(self, act_dim):
-        super().__init__()
-        self.conv1 = layers.conv2d(num_filters=32, filter_size=8, stride=4, padding=1, act='relu')
-        self.conv2 = layers.conv2d(num_filters=64, filter_size=4, stride=2, padding=2, act='relu')
-        self.conv3 = layers.conv2d(num_filters=64, filter_size=3, stride=1, padding=0, act='relu')
+class Model(nn.Layer):
+    def __init__(self, num_inputs, num_actions):
+        super(Model, self).__init__()
+        self.conv1 = nn.Conv2D(num_inputs, 32, kernel_size=3, stride=2, padding=1)
+        self.pool1 = nn.MaxPool2D(kernel_size=2, stride=2)
+        self.conv2 = nn.Conv2D(32, 64, kernel_size=3, stride=2, padding=1)
+        self.pool2 = nn.MaxPool2D(kernel_size=2, stride=2)
+        self.conv3 = nn.Conv2D(64, 64, kernel_size=3, stride=2, padding=1)
+        self.pool3 = nn.MaxPool2D(kernel_size=2, stride=2)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(64 * 3 * 3, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, num_actions)
 
-        self.fc1 = layers.fc(size=128, act='relu')
-        self.fc2 = layers.fc(size=128, act='relu')
-        self.fc3 = layers.fc(size=act_dim, act=None)
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = self.pool1(x)
+        x = F.relu(self.conv2(x))
+        x = self.pool2(x)
+        x = F.relu(self.conv3(x))
+        x = self.pool3(x)
 
-    def value(self, obs):
-        con1 = self.conv1(obs)
-        con2 = self.conv2(con1)
-        con3 = self.conv3(con2)
-
-        h1 = self.fc1(con3)
-        h2 = self.fc2(h1)
-        Q = self.fc3(h2)
-        return Q
+        x = self.flatten(x)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x

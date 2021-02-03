@@ -1,16 +1,16 @@
-import parl
-from parl import layers
+import paddle.nn as nn
+import paddle.nn.functional as F
 
 
-class Model(parl.Model):
-    def __init__(self, act_dim):
-        super().__init__()
-        self.fc1 = layers.fc(size=128, act='relu')
-        self.fc2 = layers.fc(size=128, act='relu')
-        self.fc3 = layers.fc(size=act_dim, act=None)
+class Model(nn.Layer):
+    def __init__(self, num_inputs, num_actions):
+        super(Model, self).__init__()
+        self.fc1 = nn.Linear(num_inputs, 24)
+        self.fc2 = nn.Linear(24, 24)
+        self.fc3 = nn.Linear(24, num_actions)
 
-    def value(self, obs):
-        h1 = self.fc1(obs)
-        h2 = self.fc2(h1)
-        Q = self.fc3(h2)
-        return Q
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x

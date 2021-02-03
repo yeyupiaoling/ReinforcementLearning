@@ -1,174 +1,149 @@
-import argparse
 import os
-import parl
-import retro_util
-from agent import Agent
-from model import ActorModel, CriticModel
-from parl.utils import logger, summary
-from replay_memory import ReplayMemory
 
-ACTOR_LR = 1e-4  # actor模型的学习率
-CRITIC_LR = 1e-4  # critic模型的学习速率
-GAMMA = 0.99  # 奖励系数
-TAU = 0.005  # 衰减参数
-MEMORY_SIZE = int(1e5)  # 内存记忆大小
-WARMUP_SIZE = 1e4  # 热身大小
-BATCH_SIZE = 32  # batch大小
-SKILL_FRAME = 4  # 每次执行多少帧
-RESIZE_SHAPE = (1, 112, 112)  # 训练缩放的大小，减少模型计算，原大小（224,240）
+os.environ['OMP_NUM_THREADS'] = '1'
+import argparse
+import paddle
+from env import MultipleEnvironments
+from model import Model
+import multiprocessing as _mp
+from utils import eval, print_arguments
+from paddle.distribution import Categorical
+import paddle.nn.functional as F
+import numpy as np
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--world",            type=int,   default=1,    help='游戏的世界')
+    parser.add_argument("--stage",            type=int,   default=1,    help='游戏的阶段')
+    parser.add_argument("--action_type",      type=str,   default="simple", help='游戏的动作类型')
+    parser.add_argument('--lr',               type=float, default=1e-4, help='模型的学习率')
+    parser.add_argument('--gamma',            type=float, default=0.9,  help='奖励折扣率')
+    parser.add_argument('--tau',              type=float, default=1.0,  help='GAE参数')
+    parser.add_argument('--beta',             type=float, default=0.01, help='熵权')
+    parser.add_argument('--epsilon',          type=float, default=0.2,  help='剪切替代目标参数')
+    parser.add_argument('--batch_size',       type=int,   default=16,   help='训练数据的批量大小')
+    parser.add_argument('--num_epochs',       type=int,   default=10,   help='每次采样训练多少轮')
+    parser.add_argument("--num_local_steps",  type=int,   default=512,  help='每次采样的次数')
+    parser.add_argument("--num_processes",    type=int,   default=16,   help='使用多少条线程启动游戏')
+    parser.add_argument("--saved_path",       type=str,   default="models", help='保存模型的路径')
+    parser.add_argument("--show_play",        type=bool,  default=False, help='是否显示评估游戏的界面，终端无法使用')
+    args = parser.parse_args()
+    return args
 
 
 # 训练模型
-def run_train_episode(env, agent, rpm, render=False):
-    # 获取最后一帧图像
-    obs = env.reset()[None, -1, :, :]
-    total_reward = 0
-    steps = 0
-    while True:
-        steps += 1
-        if render:
-            # 显示视频图像
-            env.render()
-        if rpm.size() < WARMUP_SIZE:
-            # 获取随机动作
-            action = env.action_space.sample()
-        else:
-            # 预测动作
-            action = agent.sample(obs)
-            # 获取动作
-            action = [0 if a < 0 else 1 for a in action]
-
-        # 执行游戏
-        next_obs, reward, isOver, info = env.step_sac(action)
-        # 获取最后一帧图像
-        next_obs = next_obs
-
-        # 记录数据
-        rpm.append(obs, action, reward, next_obs, isOver)
-
-        # 训练模型
-        if rpm.size() > WARMUP_SIZE:
-            batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal = rpm.sample_batch(BATCH_SIZE)
-            agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_terminal)
-
-        obs = next_obs
-        total_reward += reward
-
-        if isOver:
-            if render:
-                env.render(close=True)
-            break
-    return total_reward, steps
-
-
-# 评估模型
-def run_evaluate_episode(env, agent, render=False):
-    # 获取最后一帧图像
-    obs = env.reset()[None, -1, :, :]
-    total_reward = 0
-    while True:
-        if render:
-            # 显示视频图像
-            env.render()
-        # 预测动作
-        action = agent.predict(obs)
-        # 获取动作
-        action = [0 if a < 0 else 1 for a in action]
-        # 执行游戏
-        next_obs, reward, isOver, info = env.step_sac(action)
-        total_reward += reward
-        # 获取最后一帧图像
-        obs = next_obs
-
-        if isOver:
-            if render:
-                env.render(close=True)
-            break
-    return total_reward
-
-
-def main():
-    # 获取游戏，skill_frame每个动作执行的次数，resize_shape图像预处理的大小，render_preprocess是否显示预处理后的图像
-    env = retro_util.RetroEnv(game=args.env,
-                              resize_shape=RESIZE_SHAPE,
-                              skill_frame=SKILL_FRAME,
-                              render_preprocess=args.show_play,
-                              is_train=True)
-    env.seed(1)
-
-    # 游戏的图像形状
-    # obs_dim = env.observation_space.shape
-    obs_dim = RESIZE_SHAPE
-    # 动作维度
-    action_dim = env.action_space.n
-    # 动作正负的最大绝对值
-    max_action = 1
-
+def train(args):
+    # 使用 GPU训练
+    if paddle.is_compiled_with_cuda():
+        paddle.set_device("gpu:0")
+    # 创建多进程的游戏环境
+    envs = MultipleEnvironments(args.world, args.stage, args.action_type, args.num_processes)
+    # 固定初始化状态
+    paddle.seed(123)
     # 创建模型
-    actor = ActorModel(action_dim)
-    critic = CriticModel()
-    algorithm = parl.algorithms.SAC(actor=actor,
-                                    critic=critic,
-                                    max_action=max_action,
-                                    gamma=GAMMA,
-                                    tau=TAU,
-                                    actor_lr=ACTOR_LR,
-                                    critic_lr=CRITIC_LR)
-    agent = Agent(algorithm, obs_dim, action_dim)
+    model = Model(envs.num_states, envs.num_actions)
+    # 创建保存模型的文件夹
+    if not os.path.isdir(args.saved_path):
+        os.makedirs(args.saved_path)
+    paddle.save(model.state_dict(), "{}/model_{}_{}.pdparams".format(args.saved_path, args.world, args.stage))
+    # 为游戏评估单独开一个进程
+    mp = _mp.get_context("spawn")
+    process = mp.Process(target=eval, args=(args, envs.num_states, envs.num_actions))
+    process.start()
+    # 创建优化方法
+    clip_grad = paddle.nn.ClipGradByNorm(clip_norm=0.5)
+    optimizer = paddle.optimizer.Adam(parameters=model.parameters(), learning_rate=args.lr, grad_clip=clip_grad)
+    # 刚开始给每个进程的游戏执行初始化
+    [agent_conn.send(("reset", None)) for agent_conn in envs.agent_conns]
+    # 获取游戏初始的界面
+    curr_states = [agent_conn.recv() for agent_conn in envs.agent_conns]
+    curr_states = paddle.to_tensor(np.concatenate(curr_states, 0), dtype='float32')
+    curr_episode = 0
+    while True:
+        curr_episode += 1
+        old_log_policies, actions, values, states, rewards, dones = [], [], [], [], [], []
+        for _ in range(args.num_local_steps):
+            states.append(curr_states)
+            # 执行预测
+            logits, value = model(curr_states)
+            # 计算每个动作的概率值
+            policy = F.softmax(logits)
+            # 根据每个标签的概率随机生成符合概率的标签
+            old_m = Categorical(policy)
+            action = old_m.sample([1]).squeeze()
+            # 记录预测数据
+            actions.append(action)
+            values.append(value.squeeze())
+            # 计算类别的概率的对数
+            old_log_policy = old_m.log_prob(paddle.unsqueeze(action, axis=1))
+            old_log_policy = paddle.squeeze(old_log_policy)
+            old_log_policies.append(old_log_policy)
+            # 向各个进程游戏发送动作
+            [agent_conn.send(("step", int(act[0]))) for agent_conn, act in zip(envs.agent_conns, action)]
+            # 将多进程的游戏数据打包
+            state, reward, done, info = zip(*[agent_conn.recv() for agent_conn in envs.agent_conns])
+            # 进行数据转换
+            state = paddle.to_tensor(np.concatenate(state, 0), dtype='float32')
+            # 转换为tensor数据
+            reward = paddle.to_tensor(reward, dtype='float32')
+            done = paddle.to_tensor(done, dtype='float32')
+            # 记录预测数据
+            rewards.append(reward)
+            dones.append(done)
+            curr_states = state
+        # 根据上面最后的图像预测
+        _, next_value, = model(curr_states)
+        next_value = next_value.squeeze()
+        old_log_policies = paddle.concat(old_log_policies).detach().squeeze()
+        actions = paddle.concat(actions).squeeze()
+        values = paddle.concat(values).squeeze().detach()
+        states = paddle.concat(states).squeeze()
 
-    # 加载预训练模型
-    if os.path.exists(args.model_path):
-        logger.info("加载预训练模型...")
-        agent.restore(args.model_path)
+        gae = 0.0
+        R = []
+        for value, reward, done in list(zip(values, rewards, dones))[::-1]:
+            gae = gae * args.gamma * args.tau
+            gae = gae + reward + args.gamma * next_value.detach() * (1.0 - done) - value.detach()
+            next_value = value
+            R.append(gae + value)
+        R = R[::-1]
+        R = paddle.concat(R).detach()
+        advantages = R - values
+        for i in range(args.num_epochs):
+            indice = paddle.randperm(args.num_local_steps * args.num_processes)
+            for j in range(args.batch_size):
+                batch_indices = indice[
+                                int(j * (args.num_local_steps * args.num_processes / args.batch_size)): int((j + 1) * (
+                                        args.num_local_steps * args.num_processes / args.batch_size))]
+                # 根据拿到的图像执行预测
+                logits, value = model(paddle.gather(states, batch_indices))
+                # 计算每个动作的概率值
+                new_policy = F.softmax(logits)
+                # 计算类别的概率的对数
+                new_m = Categorical(new_policy)
+                new_log_policy = new_m.log_prob(paddle.unsqueeze(paddle.gather(actions, batch_indices), axis=1))
+                new_log_policy = paddle.squeeze(new_log_policy)
+                # 计算actor损失
+                ratio = paddle.exp(new_log_policy - paddle.gather(old_log_policies, batch_indices))
+                advantage = paddle.gather(advantages, batch_indices)
+                actor_loss = paddle.clip(ratio, 1.0 - args.epsilon, 1.0 + args.epsilon) * advantage
+                actor_loss = paddle.concat([paddle.unsqueeze(ratio * advantage, axis=0), paddle.unsqueeze(actor_loss, axis=0)])
+                actor_loss = -paddle.mean(paddle.min(actor_loss, axis=0))
+                # 计算critic损失
+                critic_loss = F.smooth_l1_loss(paddle.gather(R, batch_indices), value.squeeze())
+                entropy_loss = paddle.mean(new_m.entropy())
+                # 计算全部损失
+                total_loss = actor_loss + critic_loss - args.beta * entropy_loss
+                # 计算梯度
+                optimizer.clear_grad()
+                total_loss.backward()
+                optimizer.step()
+            paddle.save(model.state_dict(), "{}/model_{}_{}.pdparams".format(args.saved_path, args.world, args.stage))
+        print("Episode: {}. Total loss: {:.4f}".format(curr_episode, total_loss.numpy()[0]))
 
-    # 创建记录数据存储器
-    rpm = ReplayMemory(MEMORY_SIZE, obs_dim, action_dim)
 
-    total_steps = 0
-    step_train = 0
-    print("开始训练模型。。。")
-    while total_steps < args.train_total_steps:
-        # 训练
-        train_reward, steps = run_train_episode(env, agent, rpm, render=args.show_play)
-        logger.info('Steps: {} Reward: {}'.format(total_steps, train_reward))
-        summary.add_scalar('train/episode_reward', train_reward, total_steps)
-        total_steps += steps
-
-        # 评估
-        if step_train % 100 == 0:
-            evaluate_reward = run_evaluate_episode(env, agent, render=args.show_play)
-            logger.info('Steps {}, Evaluate reward: {}'.format(total_steps, evaluate_reward))
-            summary.add_scalar('eval/episode_reward', evaluate_reward, total_steps)
-        step_train += 1
-
-        # 保存模型
-        if not os.path.exists(args.model_path):
-            os.makedirs(args.model_path)
-        agent.save(args.model_path)
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--env',
-                        type=str,
-                        default='SuperMarioBros-Nes',
-                        help='Nes environment name')
-    parser.add_argument('--train_total_steps',
-                        type=int,
-                        default=int(1e9),
-                        help='maximum training steps')
-    parser.add_argument('--show_play',
-                        type=bool,
-                        default=True,
-                        help='if show game play')
-    parser.add_argument('--model_path',
-                        type=str,
-                        default='models',
-                        help='save model path')
-    parser.add_argument('--alpha',
-                        type=float,
-                        default=0.2,
-                        help='Temperature parameter α determines the relative importance of the \
-        entropy term against the reward (default: 0.2)')
-    args = parser.parse_args()
-    main()
+if __name__ == "__main__":
+    args = get_args()
+    print_arguments(args)
+    train(args)

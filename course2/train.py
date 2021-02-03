@@ -1,32 +1,49 @@
 import os
+
 import cv2
-import parl
 import numpy as np
+import paddle
+
 import flappy_bird.wrapped_flappy_bird as flappyBird
-from parl.utils import logger
 from model import Model
-from agent import Agent
 from replay_memory import ReplayMemory
 
-LEARN_FREQ = 5  # 更新参数步数
-MEMORY_SIZE = 20000  # 内存记忆
-MEMORY_WARMUP_SIZE = 200  # 热身大小
-BATCH_SIZE = 32  # batch大小
-LEARNING_RATE = 0.0005  # 学习率大小
-GAMMA = 0.99  # 奖励系数
-E_GREED = 0.1  # 探索初始概率
-E_GREED_DECREMENT = 1e-6  # 在训练过程中，降低探索的概率
-MAX_EPISODE = 10000  # 训练次数
-RESIZE_SHAPE = (1, 224, 224)  # 训练缩放的大小，减少模型计算，原大小（288, 512）
-SAVE_MODEL_PATH = "models/model.ckpt"  # 保存模型路径
+# 定义训练的参数
+batch_size = 64  # batch大小
+num_episodes = 10000  # 训练次数
+memory_size = 20000  # 内存记忆
+learning_rate = 1e-3  # 学习率大小
+e_greed = 0.1  # 探索初始概率
+gamma = 0.99  # 奖励系数
+e_greed_decrement = 1e-6  # 在训练过程中，降低探索的概率
+update_num = 0  # 用于计算目标模型更新次数
+resize_shape = (1, 224, 224)  # 训练缩放的大小，减少模型计算，原大小（288, 512）
+save_model_path = "models/model.ckpt"  # 保存模型路径
+
+# 实例化一个游戏环境，参数为游戏名称
+env = flappyBird.GameState()
+# 图像输入形状和动作维度
+obs_dim = resize_shape[0]
+action_dim = env.action_dim
+
+# 创建策略模型和目标模型，目标模型不参与训练
+policyQ = Model(obs_dim, action_dim)
+targetQ = Model(obs_dim, action_dim)
+targetQ.eval()
+
+# 数据记录器
+rpm = ReplayMemory(memory_size)
+# 优化方法
+optimizer = paddle.optimizer.Adam(parameters=policyQ.parameters(),
+                                  learning_rate=learning_rate)
 
 
 # 图像预处理
 def preprocess(observation):
     # 裁剪图像
-    observation = observation[:observation.shape[0]-100, :]
+    observation = observation[:observation.shape[0] - 100, :]
     # 缩放图像
-    observation = cv2.resize(observation, (RESIZE_SHAPE[1], RESIZE_SHAPE[2]))
+    observation = cv2.resize(observation, (resize_shape[1], resize_shape[2]))
     # 把图像转成灰度图
     observation = cv2.cvtColor(observation, cv2.COLOR_BGR2GRAY)
     # 图像转换成非黑即白的图像
@@ -39,96 +56,93 @@ def preprocess(observation):
     return observation
 
 
-# 训练模型
-def run_train(agent, env, rpm):
+# 评估模型
+def evaluate():
     total_reward = 0
     obs = env.reset()
-    obs = preprocess(obs)
-    step = 0
     while True:
-        step += 1
-        # 获取随机动作和执行游戏
-        action = agent.sample(obs, env)
-        next_obs, reward, isOver, info = env.step(action, is_train=True)
-        next_obs = preprocess(next_obs)
-
-        # 记录数据
-        rpm.append((obs, [action], reward, next_obs, isOver))
-
-        # 在预热完成之后，每隔LEARN_FREQ步数就训练一次
-        if (len(rpm) > MEMORY_WARMUP_SIZE) and (step % LEARN_FREQ == 0):
-            (batch_obs, batch_action, batch_reward, batch_next_obs, batch_isOver) = rpm.sample(BATCH_SIZE)
-            train_loss = agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs, batch_isOver)
-
-        total_reward += reward
+        obs = preprocess(obs)
+        obs = np.expand_dims(obs, axis=0)
+        obs = paddle.to_tensor(obs, dtype='float32')
+        action = targetQ(obs)
+        action = paddle.argmax(action).numpy()[0]
+        next_obs, reward, done, info = env.step(action)
         obs = next_obs
-        # 结束游戏
-        if isOver:
+        total_reward += reward
+
+        if done:
             break
     return total_reward
 
 
-# 评估模型
-def evaluate(agent, env):
+# 训练模型
+def train():
+    global e_greed, update_num
+    total_reward = 0
+    # 重置游戏状态
     obs = env.reset()
-    episode_reward = 0
-    isOver = False
-    while not isOver:
-        obs = preprocess(obs)
-        action = agent.predict(obs)
-        obs, reward, isOver, info = env.step(action)
-        episode_reward += reward
-    return episode_reward
+    obs = preprocess(obs)
 
+    while True:
+        # 使用贪心策略获取游戏动作的来源
+        e_greed = max(0.01, e_greed - e_greed_decrement)
+        if np.random.rand() < e_greed:
+            # 随机生成动作
+            action = env.action_space()
+        else:
+            # 策略模型预测游戏动作
+            obs1 = np.expand_dims(obs, axis=0)
+            action = policyQ(paddle.to_tensor(obs1, dtype='float32'))
+            action = paddle.argmax(action).numpy()[0]
 
-def main():
-    # 初始化游戏
-    env = flappyBird.GameState()
+        # 执行游戏
+        next_obs, reward, done, info = env.step(action)
+        next_obs = preprocess(next_obs)
+        total_reward += reward
+        # 记录游戏数据
+        rpm.append((obs, action, reward, next_obs, done))
+        obs = next_obs
+        # 游戏结束
+        if done:
+            break
+        # 记录的数据打印batch_size就开始训练
+        if len(rpm) > batch_size:
+            # 获取训练数据
+            batch_obs, batch_action, batch_reword, batch_next_obs, batch_done = rpm.sample(batch_size)
+            # 计算损失函数
+            action_value = policyQ(batch_obs)
+            action_onehot = paddle.nn.functional.one_hot(batch_action, 2)
+            pred_action_value = paddle.sum(action_value * action_onehot, axis=1)
 
-    # 图像输入形状和动作维度
-    obs_dim = RESIZE_SHAPE
-    action_dim = env.action_dim
+            best_v = targetQ(batch_next_obs)
+            best_v = paddle.max(best_v, axis=1)
 
-    # 创建存储执行游戏的内存
-    rpm = ReplayMemory(MEMORY_SIZE)
+            best_v.stop_gradient = False
+            target = batch_reword + gamma * best_v * (1.0 - batch_done)
 
-    # 创建模型
-    model = Model(act_dim=action_dim)
-    algorithm = parl.algorithms.DQN(model, act_dim=action_dim, gamma=GAMMA, lr=LEARNING_RATE)
-    agent = Agent(algorithm=algorithm,
-                  obs_dim=obs_dim,
-                  action_dim=action_dim,
-                  e_greed=E_GREED,
-                  e_greed_decrement=E_GREED_DECREMENT)
-
-    # 加载预训练模型
-    if os.path.exists(SAVE_MODEL_PATH):
-        agent.restore(SAVE_MODEL_PATH)
-
-    # 预热
-    print("开始预热...")
-    while len(rpm) < MEMORY_WARMUP_SIZE:
-        run_train(agent, env, rpm)
-
-    # 开始训练
-    print("开始正式训练...")
-    episode = 0
-    while episode < MAX_EPISODE:
-        # 训练
-        for i in range(50):
-            train_reward = run_train(agent, env, rpm)
-            episode += 1
-            logger.info('Episode: {}, Reward: {:.2f}, e_greed: {:.2f}'.format(episode, train_reward, agent.e_greed))
-
-        # 评估
-        eval_reward = evaluate(agent, env)
-        logger.info('Episode: {}, Evaluate reward:{:.2f}'.format(episode, eval_reward))
-
-        # 保存模型
-        if not os.path.exists(os.path.dirname(SAVE_MODEL_PATH)):
-            os.makedirs(os.path.dirname(SAVE_MODEL_PATH))
-        agent.save(SAVE_MODEL_PATH)
+            cost = paddle.nn.functional.mse_loss(pred_action_value, target)
+            # 梯度更新
+            optimizer.clear_grad()
+            cost.backward()
+            optimizer.step()
+            # 指定的训练次数更新一次目标模型的参数
+            if update_num % 200 == 0:
+                targetQ.load_dict(policyQ.state_dict())
+            update_num += 1
+    return total_reward
 
 
 if __name__ == '__main__':
-    main()
+    episode = 0
+    while episode < num_episodes:
+        for t in range(50):
+            train_reward = train()
+            episode += 1
+            print('Episode: {}, Reward: {:.2f}, e_greed: {:.2f}'.format(episode, train_reward, e_greed))
+
+        eval_reward = evaluate()
+        print('Episode:{}    test_reward:{}'.format(episode, eval_reward))
+        # 保存模型
+        if not os.path.exists(os.path.dirname(save_model_path)):
+            os.makedirs(os.path.dirname(save_model_path))
+        paddle.save(targetQ.state_dict(), save_model_path)

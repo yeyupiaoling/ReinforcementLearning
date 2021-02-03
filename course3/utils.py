@@ -3,14 +3,16 @@ import os
 os.environ['OMP_NUM_THREADS'] = '1'
 import paddle
 from model import Model
-from collections import deque
 from env import create_train_env
 import paddle.nn.functional as F
 from gym_super_mario_bros.actions import SIMPLE_MOVEMENT, COMPLEX_MOVEMENT, RIGHT_ONLY
+from visualdl import LogWriter
+import hashlib
 
 
 # 评估模型
 def eval(args, num_states, num_actions):
+    log_writer = LogWriter(logdir='log')
     # 固定初始化状态
     paddle.seed(123)
     # 使用 GPU预测
@@ -33,20 +35,29 @@ def eval(args, num_states, num_actions):
     state = paddle.to_tensor(env.reset(), dtype="float32")
     # 一开始就更新模型参数
     done = True
-    curr_step = 0
-    # 执行动作的容器
-    actions = deque(maxlen=args.max_actions)
+    # 日志的记录步数
+    step = 0
+    # 旧模型的MD5
+    old_model_file_md5 = ''
+    # 游戏总得分
     total_reward = 0
     while True:
-        curr_step += 1
         # 每结束一次就更新模型参数
         if done:
             try:
-                model_dict = paddle.load("{}/model_{}_{}.pdparams".format(args.saved_path, args.world, args.stage))
+                model_path = "{}/model_{}_{}.pdparams".format(args.saved_path, args.world, args.stage)
+                # 使用文件的MD5保证每个模型只用一次
+                with open(model_path, 'rb') as f:
+                    file = f.read()
+                file_md5 = hashlib.md5(file).hexdigest()
+                if file_md5 == old_model_file_md5:
+                    continue
+                else:
+                    model_dict = paddle.load(model_path)
+                    old_model_file_md5 = file_md5
             except:
                 continue
             total_reward = 0
-            # local_model.load_dict(model.state_dict())
             local_model.load_dict(model_dict)
         # 预测动作概率和评估值
         logits, value = local_model(state)
@@ -57,23 +68,19 @@ def eval(args, num_states, num_actions):
         state, reward, done, info = env.step(int(action))
         total_reward += reward
         # 显示界面
-        # env.render()
-        # 记录动作
-        actions.append(action)
-        if curr_step > args.num_global_steps or actions.count(actions[0]) == actions.maxlen:
-            done = True
+        if args.show_play:
+            env.render()
         # 游戏通关
         if info["flag_get"]:
             print("World {} stage {} 通关".format(args.world, args.stage))
             paddle.save(local_model.state_dict(),
                         "{}/model_{}_{}_finish.pdparams".format(args.saved_path, args.world, args.stage))
-
         # 重置游戏状态
         if done:
-            curr_step = 0
-            actions.clear()
+            step += 1
             state = env.reset()
             print('总得分是：%f' % total_reward)
+            log_writer.add_scalar(tag='Eval reward', value=total_reward, step=step)
         # 转换每一步都游戏状态
         state = paddle.to_tensor(state, dtype="float32")
 

@@ -6,7 +6,7 @@ from env import create_train_env
 
 def main():
     # 获取游戏
-    env = create_train_env(world=1, stage=2, actions=COMPLEX_MOVEMENT)
+    env = create_train_env(world=1, stage=1, actions=COMPLEX_MOVEMENT)
 
     print(env.observation_space.shape)
     print(env.action_space.n)
