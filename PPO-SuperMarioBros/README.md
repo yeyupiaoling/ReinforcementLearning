@@ -1,11 +1,14 @@
-# 马里奥
+# PPO-SuperMarioBros
+本项目是使用PPO模型训练超级马里奥游戏，通过选择不同的游戏世界和阶段，可以顺利通关各个关卡。
 
-## 安装
+# 超级马里奥
+
+1. 安装超级马里奥库，命令如下。
 ```shell
 pip install gym-super-mario-bros -i https://mirrors.aliyun.com/pypi/simple/
 ```
 
-## 游戏场景
+2. 游戏场景，通过选择不同的游戏场景，可以优化输入的图像，减少在训练PPO模型时由于图像的复杂度带来的训练困难。但是本项目还是使用原生的游戏场景。
 <table>
 <thead>
 <tr>
@@ -54,8 +57,7 @@ pip install gym-super-mario-bros -i https://mirrors.aliyun.com/pypi/simple/
 </tr></tbody></table>
 
 
-## 返回info内容解读
-
+3. 游戏在执行每一步都会返回`obs, reward, terminal, info`这四个数据，启动obs是经过预处理的游戏图像，reward是游戏奖励的分数，terminal是当前游戏是否结束，info是游戏返回的状态，info具体内容如下。
 
 <table>
 <thead>
@@ -117,26 +119,66 @@ pip install gym-super-mario-bros -i https://mirrors.aliyun.com/pypi/simple/
 <td align="left">马里奥的<em>y</em>在舞台中的位置(从底部开始)</td>
 </tr></tbody></table>
 
-# 测试
-```shell
-python test_env.py
+
+4. 测试游戏环境，通过执行`test_env.py`可以测试游戏的环境。
+```python
+from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
+import numpy as np
+import cv2
+from env import create_train_env
+
+
+def main():
+    # 获取游戏
+    env = create_train_env(world=1, stage=1, actions=COMPLEX_MOVEMENT)
+
+    print(env.observation_space.shape)
+    print(env.action_space.n)
+
+    obs = env.reset()
+
+    while True:
+        # 游戏生成的随机动作，int类型数值
+        action = env.action_space.sample()
+        # 执行游戏
+        obs, reward, terminal, info = env.step(action)
+        obs = np.squeeze(obs)
+        obses = obs[0]
+        for i in range(1, obs.shape[0]):
+            print(obs[i].shape)
+            obses = np.hstack([obses, obs[i]])
+        cv2.imshow('obes', obses)
+        env.render()
+        print("=" * 50)
+        print("action:", action)
+        print("obs shape:", obs.shape)
+        print("reward:", reward)
+        print("terminal:", terminal)
+        print("info:", info)
+        if terminal:
+            obs = env.reset()
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 # 训练
 
-## 安装PaddlePaddle
+1. 首先安装PaddlePaddle以及相关库。
 ```shell
-pip install paddlepaddle-gpu==2.0.0 -i https://mirrors.aliyun.com/pypi/simple/
+pip install paddlepaddle-gpu==2.0.0 visualdl -i https://mirrors.aliyun.com/pypi/simple/
 ```
 
-## 执行训练
-通过传参可以选择各个关卡
+
+2. 执行训练，通过world参数指定超级马里奥的世界图，然后使用stage参数指定该世界图的阶段。训练结构结束之后，模型会保持在models目录，包含finish字段的模型是可以成功通关的模型。
 ```shell
-python train.py
+python train.py --world=1 --stage=1
 ```
 
-## 执行预测
+# 预测
+通过world参数指定超级马里奥的世界图，然后使用stage参数指定该世界图的阶段。当指定的关卡模型有包含finish字段的模型，会优先使用该模型。这个预测程序需要在界面环境下执行，如果要在终端下执行，需要注释`env.render()`这行代码。
 ```shell
-python infer.py
+python infer.py --world=1 --stage=1
 ```
 

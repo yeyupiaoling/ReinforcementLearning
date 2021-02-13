@@ -45,6 +45,7 @@ def infer(args):
         # 执行游戏
         state, reward, done, info = env.step(int(action))
         total_reward += reward
+        print(info)
         # 转换每一步都游戏状态
         state = paddle.to_tensor(state, dtype="float32")
         if done:

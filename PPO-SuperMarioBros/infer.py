@@ -10,8 +10,7 @@ import paddle.nn.functional as F
 
 
 def get_args():
-    parser = argparse.ArgumentParser(
-        """Implementation of model described in the paper: Proximal Policy Optimization Algorithms for Contra Nes""")
+    parser = argparse.ArgumentParser()
     parser.add_argument("--world", type=int, default=1)
     parser.add_argument("--stage", type=int, default=1)
     parser.add_argument("--action_type", type=str, default="simple")
@@ -39,7 +38,10 @@ def infer(args):
     # 创建模型
     model = Model(env.observation_space.shape[0], len(actions))
     # 加载模型参数文件
-    model.load_dict(paddle.load("{}/model_{}_{}_finish.pdparams".format(args.saved_path, args.world, args.stage)))
+    model_path = "{}/model_{}_{}_finish.pdparams".format(args.saved_path, args.world, args.stage)
+    if not os.path.exists(model_path):
+        model_path = "{}/model_{}_{}.pdparams".format(args.saved_path, args.world, args.stage)
+    model.load_dict(paddle.load(model_path))
     # 切换评估模式
     model.eval()
     # 获取刚开始的游戏图像
@@ -58,6 +60,7 @@ def infer(args):
         total_reward += reward
         # 转换每一步都游戏状态
         state = paddle.to_tensor(state, dtype="float32")
+        print(info)
         # 游戏通关
         if info["flag_get"]:
             print("World {} stage {} 通关".format(args.world, args.stage))
