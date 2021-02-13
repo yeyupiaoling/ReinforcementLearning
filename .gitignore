@@ -4,8 +4,7 @@ __pycache__/
 roms/
 DQN-FlappyBird/models
 PPO-SuperMarioBros/models
+PPO-retro/models
 course4/models
 course5/models
 course5/train_log
-course6/models
-course6/train_log
