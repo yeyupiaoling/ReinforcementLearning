@@ -61,7 +61,7 @@ python -m retro.import /ROM的文件夹/
 .sms：世嘉Master System
 ```
 
-4. 测试游戏环境，通过执行`test_env.py`可以测试游戏的环境。
+4. 测试游戏环境，通过执行`test_env.py`可以测试游戏的环境。游戏在执行每一步都会返回`obs, reward, terminal, info`这四个数据，启动obs是经过预处理的游戏图像，reward是游戏奖励的分数，terminal是当前游戏是否结束，info是游戏返回的信息。
 ```python
 import cv2
 import numpy as np

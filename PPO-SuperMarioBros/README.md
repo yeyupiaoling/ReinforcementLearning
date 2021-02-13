@@ -1,6 +1,17 @@
 # PPO-SuperMarioBros
 本项目是使用PPO模型训练超级马里奥游戏，通过选择不同的游戏世界和阶段，可以顺利通关各个关卡。
 
+# 项目结构
+```shell script
+PPO-SuperMarioBros/
+├── env.py            用于游戏环境和多线程游戏环境
+├── infer.py          使用训练好的模型进行推理
+├── model.py          模型结构
+├── test_env.py       测试游戏环境
+├── train.py          训练PPO模型
+└── utils.py          用于评估和输出参数
+```
+
 # 超级马里奥
 
 1. 安装超级马里奥库，命令如下。
@@ -57,7 +68,7 @@ pip install gym-super-mario-bros -i https://mirrors.aliyun.com/pypi/simple/
 </tr></tbody></table>
 
 
-3. 游戏在执行每一步都会返回`obs, reward, terminal, info`这四个数据，启动obs是经过预处理的游戏图像，reward是游戏奖励的分数，terminal是当前游戏是否结束，info是游戏返回的状态，info具体内容如下。
+3. 游戏在执行每一步都会返回`obs, reward, terminal, info`这四个数据，启动obs是经过预处理的游戏图像，reward是游戏奖励的分数，terminal是当前游戏是否结束，info是游戏返回的信息，info具体内容如下。
 
 <table>
 <thead>
