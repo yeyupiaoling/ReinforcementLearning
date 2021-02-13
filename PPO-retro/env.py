@@ -34,7 +34,7 @@ class MultipleEnvironments:
             request, action = self.env_conns[index].recv()
             if request == "step":
                 # 执行游戏
-                self.env_conns[index].send(self.envs[index].step(action.item()))
+                self.env_conns[index].send(self.envs[index].step(action))
             elif request == "reset":
                 # 重置游戏状态
                 self.env_conns[index].send(self.envs[index].reset())
