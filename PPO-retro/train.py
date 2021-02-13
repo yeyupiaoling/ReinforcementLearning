@@ -44,7 +44,7 @@ def train(args):
     # 创建保存模型的文件夹
     if not os.path.isdir(args.saved_path):
         os.makedirs(args.saved_path)
-    paddle.save(model.state_dict(), "{}/model_{}.pth".format(args.saved_path, args.game))
+    paddle.save(model.state_dict(), "{}/model_{}.pdparams".format(args.saved_path, args.game))
     # 为游戏评估单独开一个进程
     mp = _mp.get_context("spawn")
     process = mp.Process(target=eval, args=(args, envs.num_states, envs.num_actions))
@@ -137,7 +137,7 @@ def train(args):
                 optimizer.clear_grad()
                 total_loss.backward()
                 optimizer.step()
-            paddle.save(model.state_dict(), "{}/model_{}.pth".format(args.saved_path, args.game))
+            paddle.save(model.state_dict(), "{}/model_{}.pdparams".format(args.saved_path, args.game))
         print("Episode: {}. Total loss: {:.4f}".format(curr_episode, total_loss.numpy()[0]))
 
 

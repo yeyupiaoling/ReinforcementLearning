@@ -38,7 +38,7 @@ def eval(args, num_states, num_actions):
         # 每结束一次就更新模型参数
         if done:
             try:
-                model_path = "{}/model_{}_{}.pdparams".format(args.saved_path, args.world, args.stage)
+                model_path = "{}/model_{}.pdparams".format(args.saved_path, args.game)
                 # 使用文件的MD5保证每个模型只用一次
                 with open(model_path, 'rb') as f:
                     file = f.read()
@@ -70,7 +70,7 @@ def eval(args, num_states, num_actions):
             print('总得分是：%f' % total_reward)
             log_writer.add_scalar(tag='Eval reward', value=total_reward, step=step)
             if max_reward < total_reward:
-                paddle.save(local_model.state_dict(), "{}/model_best_{}.pth".format(args.saved_path, args.game))
+                paddle.save(local_model.state_dict(), "{}/model_best_{}.pdparams".format(args.saved_path, args.game))
                 max_reward = total_reward
         # 转换每一步都游戏状态
         state = paddle.to_tensor(state, dtype="float32")
