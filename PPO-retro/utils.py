@@ -33,6 +33,7 @@ def eval(args, num_states, num_actions):
     old_model_file_md5 = ''
     # 游戏总得分
     total_reward = 0
+    max_reward = 0
     while True:
         # 每结束一次就更新模型参数
         if done:
@@ -62,17 +63,15 @@ def eval(args, num_states, num_actions):
         # 显示界面
         if args.show_play:
             env.render()
-        # 游戏通关
-        if info["flag_get"]:
-            print("World {} stage {} 通关".format(args.world, args.stage))
-            paddle.save(local_model.state_dict(),
-                        "{}/model_{}_{}_finish.pdparams".format(args.saved_path, args.world, args.stage))
         # 重置游戏状态
         if done:
             step += 1
             state = env.reset()
             print('总得分是：%f' % total_reward)
             log_writer.add_scalar(tag='Eval reward', value=total_reward, step=step)
+            if max_reward < total_reward:
+                paddle.save(local_model.state_dict(), "{}/model_best_{}.pth".format(args.saved_path, args.game))
+                max_reward = total_reward
         # 转换每一步都游戏状态
         state = paddle.to_tensor(state, dtype="float32")
 

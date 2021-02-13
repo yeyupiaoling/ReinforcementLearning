@@ -1,6 +1,36 @@
+# PPO-retro
+本项目是使用PPO模型训练Gym Retro游戏，支持训练各种游戏，如超级马里奥，雪人兄弟，魂斗罗等等。
+
 # 项目结构
+```shell script
+PPO-retro/
+├── actions.py        定义每个游戏的动作
+├── discretizer.py    定义有点动作的工具类
+├── env.py            用于游戏环境和多线程游戏环境
+├── infer.py          使用训练好的模型进行推理
+├── model.py          模型结构
+├── retro_util.py     retro游戏动作和图像处理
+├── retrowrapper.py   用于支持多线程retro游戏环境
+├── test_env.py       测试游戏环境
+├── train.py          训练PPO模型
+└── utils.py          用于评估和输出参数
+```
 
 # retro游戏模拟器
+Gym Retro可的游戏转变为Gym环境以进行强化学习，并附带约1000种游戏的集成功能。它使用各种支持Libretro API的仿真器，从而使添加新仿真器变得相当容易。
+支持平台：
+- Windows 7、8、10
+- macOS 10.13（High Sierra），10.14（Mojave）
+- Linux（许多Linux1）
+
+支持的Python：
+- 3.6
+- 3.7
+- 3.8
+
+每个游戏集成都具有列出游戏中变量的存储位置的文件，基于这些变量的奖励功能，情节结束条件。
+
+**请注意** ，不包含ROM，必须自己获取它们。
 
 1. 安装retro
 ```shell

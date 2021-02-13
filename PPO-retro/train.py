@@ -44,7 +44,7 @@ def train(args):
     # 创建保存模型的文件夹
     if not os.path.isdir(args.saved_path):
         os.makedirs(args.saved_path)
-    paddle.save(model.state_dict(), "{}/model_{}_{}.pdparams".format(args.saved_path, args.world, args.stage))
+    paddle.save(model.state_dict(), "{}/model_{}.pth".format(args.saved_path, args.game))
     # 为游戏评估单独开一个进程
     mp = _mp.get_context("spawn")
     process = mp.Process(target=eval, args=(args, envs.num_states, envs.num_actions))
