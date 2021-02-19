@@ -1,10 +1,12 @@
 # DQN-FlappyBird
-本项目是使用DQN模型训练飞翔的小鸟游戏，这个是一个入门级的强化学习进阶项目，通过使用DQN控制小鸟通过障碍。
+本项目是使用DDQN模型训练Chrome浏览器的霸王龙游戏，这个是一个入门级的强化学习进阶项目，通过使用DDQN控制霸王龙通过障碍。
 
 # 项目结构
 ```shell script
 DQN-FlappyBird/
-├── flappy_bird/        游戏程序
+├── dino                霸王龙游戏程序
+├── env.py              游戏处理
+├── game.py             启动游戏程序
 ├── infer.py            使用训练好的模型进行推理
 ├── model.py            模型结构
 ├── replay_memory.py    游戏数据的记录器
@@ -21,29 +23,32 @@ pip install pygame
 
 2. 使用`test_env.py`可以测试游戏环境，游戏在执行每一步都会返回`obs, reward, done, info`这四个数据，启动obs是游戏图像，reward是游戏奖励的分数，done是当前游戏是否结束，info是游戏返回的信息。
 ```python
-import flappy_bird.wrapped_flappy_bird as flappyBird
+import cv2
+import numpy
+
+from env import TRexGame
 
 
 def main():
-    # 初始化游戏
-    env = flappyBird.GameState()
-    # 开始游戏
-    obs = env.reset()
+    # 获取游戏
+    env = TRexGame()
+    print(env.observation_space.shape)
+    print(env.action_space.n)
 
-    # 游戏未结束执行一直执行游戏
     while True:
         # 游戏生成的随机动作，int类型数值
-        action = env.action_space()
+        action = env.action_space.sample()
         # 执行游戏
-        obs, reward, done, info = env.step(action, is_train=False)
+        obs, reward, terminal, info = env.step(action)
+        obs = numpy.squeeze(obs)
+        cv2.imshow('obs', obs)
+        cv2.waitKey(1)
         print("=" * 50)
         print("action:", action)
         print("obs shape:", obs.shape)
         print("reward:", reward)
-        print("terminal:", done)
+        print("terminal:", terminal)
         print("info:", info)
-        if done:
-            obs = env.reset()
 
 
 if __name__ == "__main__":
@@ -63,9 +68,9 @@ pip install paddlepaddle-gpu==2.0.0 -i https://mirrors.aliyun.com/pypi/simple/
 python train.py
 ```
 
+
 ## 预测
 预测程序会使用训练时保存的模型进行预测，这个预测程序需要在界面环境下执行。
 ```shell
 python infer.py
 ```
-

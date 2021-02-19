@@ -111,13 +111,13 @@ def train():
             batch_obs, batch_action, batch_reword, batch_next_obs, batch_done = rpm.sample(batch_size)
             # 计算损失函数
             action_value = policyQ(batch_obs)
-            action_onehot = paddle.nn.functional.one_hot(batch_action, 2)
+            action_onehot = paddle.nn.functional.one_hot(batch_action, action_dim)
             pred_action_value = paddle.sum(action_value * action_onehot, axis=1)
 
             best_v = targetQ(batch_next_obs)
             best_v = paddle.max(best_v, axis=1)
 
-            best_v.stop_gradient = False
+            best_v.stop_gradient = True
             target = batch_reword + gamma * best_v * (1.0 - batch_done)
 
             cost = paddle.nn.functional.mse_loss(pred_action_value, target)
