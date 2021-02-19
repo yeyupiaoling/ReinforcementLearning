@@ -193,3 +193,8 @@ python train.py --world=1 --stage=1
 python infer.py --world=1 --stage=1
 ```
 
+# 模型下载
+
+| 关卡 | 模型 |
+| :---: | :---: |
+| world=1，stage=1 | [点击下载](https://resource.doiduoyi.com/#ake9ca1) |
