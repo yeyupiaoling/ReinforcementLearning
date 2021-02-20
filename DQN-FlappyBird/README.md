@@ -69,3 +69,10 @@ python train.py
 python infer.py
 ```
 
+
+# 模型下载
+
+| 模型 | 下载地址 |
+| :---: | :---: |
+| DQN | [点击下载](https://resource.doiduoyi.com/#ake9ca1) |
+

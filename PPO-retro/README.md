@@ -124,9 +124,15 @@ SnowBrothers-Nes
 
 4. 自行训练其他游戏，理论情况下只需要更改游戏名称就可以正常训练，但是为了模型更好的拟合，最好是可以修改一下游戏可执行的动作，动作在`actions.py`。
 
-## 预测
+# 预测
 预测程序会使用训练时保存的最好得分模型进行预测，这个预测程序需要在界面环境下执行，如果要在终端下执行，需要注释`env.render()`这行代码。
 ```shell
 python infer.py --game=SuperMarioBros-Nes
 ```
 
+# 模型下载
+
+| 游戏名称 | 预训练模型 | 最好的通关模型 |
+| :---: | :---: | :---: |
+| SuperMarioBros-Nes（超级马里奥） | [点击下载](https://resource.doiduoyi.com/#ake9ca1) | [点击下载](https://resource.doiduoyi.com/#ake9ca1) |
+| SnowBrothers-Nes（雪人兄弟） | [点击下载](https://resource.doiduoyi.com/#ake9ca1) | [点击下载](https://resource.doiduoyi.com/#ake9ca1) |
