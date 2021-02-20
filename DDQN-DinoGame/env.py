@@ -90,6 +90,6 @@ class DinoGame:
 
     def preprocess(self, image):
         image = cv2.resize(image, (self.reshape[2], self.reshape[1]))
-        image[image > 0] = 255
+        _, image = cv2.threshold(image, 50, 255, cv2.THRESH_BINARY)
         image = np.expand_dims(image, axis=0)
         return image

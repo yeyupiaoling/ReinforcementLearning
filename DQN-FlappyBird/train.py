@@ -17,7 +17,7 @@ e_greed = 0.1  # 探索初始概率
 gamma = 0.99  # 奖励系数
 e_greed_decrement = 1e-6  # 在训练过程中，降低探索的概率
 update_num = 0  # 用于计算目标模型更新次数
-resize_shape = (1, 144, 206)  # 训练缩放的大小，减少模型计算，原大小（288, 512）
+resize_shape = (1, 36, 52)  # 训练缩放的大小，减少模型计算，原大小（288, 512）
 save_model_path = "models/model.pdparams"  # 保存模型路径
 
 # 实例化一个游戏环境，参数为游戏名称

@@ -8,7 +8,7 @@ class Model(nn.Layer):
         self.conv1 = nn.Conv2D(num_inputs, 32, 3, stride=2, padding=1)
         self.conv2 = nn.Conv2D(32, 32, 3, stride=2, padding=1)
         self.conv3 = nn.Conv2D(32, 64, 3, stride=2, padding=1)
-        self.linear = nn.Linear(64 * 26 * 18, 256)
+        self.linear = nn.Linear(64 * 7 * 5, 256)
         self.flatten = nn.Flatten()
         self.fc = nn.Linear(256, num_actions)
 

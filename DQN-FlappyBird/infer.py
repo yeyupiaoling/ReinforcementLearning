@@ -5,7 +5,7 @@ import paddle
 import flappy_bird.wrapped_flappy_bird as flappyBird
 from model import Model
 
-resize_shape = (1, 144, 206)  # 训练缩放的大小
+resize_shape = (1, 36, 52)  # 训练缩放的大小
 save_model_path = "models/model.pdparams"  # 保存模型路径
 
 

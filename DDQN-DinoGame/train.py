@@ -1,6 +1,7 @@
 import os
 import time
 
+import cv2
 import numpy as np
 import paddle
 
@@ -18,10 +19,11 @@ gamma = 0.99  # 奖励系数
 e_greed_decrement = 1e-6  # 在训练过程中，降低探索的概率
 update_num = 0  # 用于计算目标模型更新次数
 save_model_path = "models/model.pdparams"  # 保存模型路径
+resize_shape = (1, 30, 90)  # 训练缩放的大小
 FPS = 25  # 控制游戏截图帧数
 
 # 实例化一个游戏环境，参数为游戏名称
-env = DinoGame()
+env = DinoGame(reshape=resize_shape)
 # 图像输入形状和动作维度
 obs_dim = env.observation_space.shape[0]
 action_dim = env.action_space.n
@@ -42,6 +44,7 @@ optimizer = paddle.optimizer.Adam(parameters=policyQ.parameters(),
 def evaluate():
     total_reward = 0
     obs = env.reset()
+    last_time = time.time()
     while True:
         obs = np.expand_dims(obs, axis=0)
         obs = paddle.to_tensor(obs, dtype='float32')
@@ -50,9 +53,13 @@ def evaluate():
         next_obs, reward, done, info = env.step(action)
         obs = next_obs
         total_reward += reward
-
         if done:
             break
+        # 防止截图太快
+        fps_now = 1 / (time.time() - last_time)
+        if fps_now > FPS:
+            time.sleep(1 / FPS - 1 / fps_now)
+        last_time = time.time()
     return total_reward
 
 
@@ -62,7 +69,7 @@ def train():
     total_reward = 0
     # 重置游戏状态
     obs = env.reset()
-    last_time = 0
+    last_time = time.time()
     while True:
         # 使用贪心策略获取游戏动作的来源
         e_greed = max(0.01, e_greed - e_greed_decrement)
@@ -95,7 +102,6 @@ def train():
 
             next_action_value = policyQ(batch_next_obs)
             greedy_action = paddle.argmax(next_action_value, axis=-1)
-            # greedy_action = paddle.unsqueeze(greedy_action, axis=[1])
             greedy_action_onehot = paddle.nn.functional.one_hot(greedy_action, action_dim)
             next_pred_value = targetQ(batch_next_obs)
             max_v = paddle.sum(greedy_action_onehot * next_pred_value, axis=1)
@@ -112,11 +118,14 @@ def train():
                 targetQ.load_dict(policyQ.state_dict())
             update_num += 1
         # 防止截图太快
-        if last_time:
-            fps_now = 1 / (time.time() - last_time)
-            if fps_now > FPS:
-                time.sleep(1 / FPS - 1 / fps_now)
+        fps_now = 1 / (time.time() - last_time)
+        if fps_now > FPS:
+            time.sleep(1 / FPS - 1 / fps_now)
         last_time = time.time()
+        # 显示图像
+        img = cv2.putText(np.squeeze(obs), "%dFPS" % int(fps_now), (20, 10), cv2.FONT_ITALIC, 0.3, 255, 1)
+        cv2.imshow('obs', img)
+        cv2.waitKey(1)
     return total_reward
 
 
