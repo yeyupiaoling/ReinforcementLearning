@@ -5,18 +5,18 @@ import paddle
 import flappy_bird.wrapped_flappy_bird as flappyBird
 from model import Model
 
-resize_shape = (1, 224, 224)  # 训练缩放的大小
+resize_shape = (1, 144, 206)  # 训练缩放的大小
 save_model_path = "models/model.pdparams"  # 保存模型路径
 
 
 # 图像预处理
 def preprocess(observation):
     # 裁剪图像
-    observation = observation[:observation.shape[0]-100, :]
-    # 缩放图像
-    observation = cv2.resize(observation, (resize_shape[1], resize_shape[2]))
+    observation = observation[:observation.shape[0] - 100, :]
     # 把图像转成灰度图
     observation = cv2.cvtColor(observation, cv2.COLOR_BGR2GRAY)
+    # 缩放图像
+    observation = cv2.resize(observation, (resize_shape[1], resize_shape[2]))
     # 图像转换成非黑即白的图像
     ret, observation = cv2.threshold(observation, 1, 255, cv2.THRESH_BINARY)
     observation = np.expand_dims(observation, axis=0)

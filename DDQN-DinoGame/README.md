@@ -1,4 +1,4 @@
-# DQN-FlappyBird
+# DDQN-DinoGame
 本项目是使用DDQN模型训练Chrome浏览器的霸王龙游戏，这个是一个入门级的强化学习进阶项目，通过使用DDQN控制霸王龙通过障碍。
 
 # 项目结构
@@ -22,18 +22,21 @@ pip install pygame
 ```
 
 2. 使用`test_env.py`可以测试游戏环境，游戏在执行每一步都会返回`obs, reward, done, info`这四个数据，启动obs是游戏图像，reward是游戏奖励的分数，done是当前游戏是否结束，info是游戏返回的信息。
+
 ```python
 import cv2
 import numpy
 
-from env import TRexGame
+from env import DinoGame
 
 
 def main():
     # 获取游戏
-    env = TRexGame()
+    env = DinoGame()
     print(env.observation_space.shape)
     print(env.action_space.n)
+
+    obs = env.reset()
 
     while True:
         # 游戏生成的随机动作，int类型数值
@@ -49,6 +52,8 @@ def main():
         print("reward:", reward)
         print("terminal:", terminal)
         print("info:", info)
+        if terminal:
+            obs = env.reset()
 
 
 if __name__ == "__main__":

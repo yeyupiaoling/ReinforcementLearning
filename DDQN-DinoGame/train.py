@@ -1,9 +1,10 @@
 import os
+import time
 
 import numpy as np
 import paddle
 
-from env import TRexGame
+from env import DinoGame
 from model import Model
 from replay_memory import ReplayMemory
 
@@ -17,9 +18,10 @@ gamma = 0.99  # 奖励系数
 e_greed_decrement = 1e-6  # 在训练过程中，降低探索的概率
 update_num = 0  # 用于计算目标模型更新次数
 save_model_path = "models/model.pdparams"  # 保存模型路径
+FPS = 25  # 控制游戏截图帧数
 
 # 实例化一个游戏环境，参数为游戏名称
-env = TRexGame()
+env = DinoGame()
 # 图像输入形状和动作维度
 obs_dim = env.observation_space.shape[0]
 action_dim = env.action_space.n
@@ -60,6 +62,7 @@ def train():
     total_reward = 0
     # 重置游戏状态
     obs = env.reset()
+    last_time = 0
     while True:
         # 使用贪心策略获取游戏动作的来源
         e_greed = max(0.01, e_greed - e_greed_decrement)
@@ -108,6 +111,12 @@ def train():
             if update_num % 200 == 0:
                 targetQ.load_dict(policyQ.state_dict())
             update_num += 1
+        # 防止截图太快
+        if last_time:
+            fps_now = 1 / (time.time() - last_time)
+            if fps_now > FPS:
+                time.sleep(1 / FPS - 1 / fps_now)
+        last_time = time.time()
     return total_reward
 
 

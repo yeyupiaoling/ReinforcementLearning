@@ -1,17 +1,16 @@
 import numpy as np
 import paddle
 
-from env import TRexGame
+from env import DinoGame
 from model import Model
 
 resize_shape = (1, 224, 224)  # 训练缩放的大小
 save_model_path = "models/model.pdparams"  # 保存模型路径
 
 
-
 def main():
     # 初始化游戏
-    env = TRexGame()
+    env = DinoGame()
     # 图像输入形状和动作维度
     obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n

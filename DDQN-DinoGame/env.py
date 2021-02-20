@@ -11,7 +11,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 
 
-class TRexGame:
+class DinoGame:
     def __init__(self, reshape=(1, 150, 450)):
         chrome_options = Options()
         chrome_options.add_argument("disable-infobars")
@@ -75,6 +75,7 @@ class TRexGame:
         self.last_score = 0
         self.driver.execute_script("Runner.instance_.restart();")
         time.sleep(0.2)
+        return np.zeros(self.observation_space.shape, dtype=np.float32)
 
     def close(self):
         self.driver.close()

@@ -1,14 +1,16 @@
 import cv2
 import numpy
 
-from env import TRexGame
+from env import DinoGame
 
 
 def main():
     # 获取游戏
-    env = TRexGame()
+    env = DinoGame()
     print(env.observation_space.shape)
     print(env.action_space.n)
+
+    obs = env.reset()
 
     while True:
         # 游戏生成的随机动作，int类型数值
@@ -24,6 +26,8 @@ def main():
         print("reward:", reward)
         print("terminal:", terminal)
         print("info:", info)
+        if terminal:
+            obs = env.reset()
 
 
 if __name__ == "__main__":

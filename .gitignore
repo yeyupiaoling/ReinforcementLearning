@@ -3,8 +3,8 @@ __pycache__/
 *.py[cod]
 roms/
 DQN-FlappyBird/models
+DDQN-DinoGame/models
 PPO-SuperMarioBros/models
 PPO-retro/models
-course4/models
 course5/models
 course5/train_log
