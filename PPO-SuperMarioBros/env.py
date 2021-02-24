@@ -123,12 +123,14 @@ class MultipleEnvironments:
         self.num_states = self.envs[0].observation_space.shape[0]
         # 获取动作的数量
         self.num_actions = len(actions)
+        self.process = []
         # 启动多有效线程
         for index in range(num_envs):
-            process = mp.Process(target=self.run, args=(index,))
-            process.start()
+            self.process.append(mp.Process(target=self.run, args=(index,)))
+            self.process[index].start()
             self.env_conns[index].close()
 
+    # 执行游戏动作
     def run(self, index):
         self.agent_conns[index].close()
         while True:
@@ -142,3 +144,8 @@ class MultipleEnvironments:
                 self.env_conns[index].send(self.envs[index].reset())
             else:
                 raise NotImplementedError
+
+    # 关闭游戏线程
+    def close(self):
+        for process in self.process:
+            process.kill()

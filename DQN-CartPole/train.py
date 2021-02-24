@@ -96,9 +96,9 @@ def train():
 
             cost = paddle.nn.functional.mse_loss(pred_action_value, target)
             # 梯度更新
-            optimizer.clear_grad()
             cost.backward()
             optimizer.step()
+            optimizer.clear_grad()
             # 指定的训练次数更新一次目标模型的参数
             if update_num % 200 == 0:
                 targetQ.load_dict(policyQ.state_dict())

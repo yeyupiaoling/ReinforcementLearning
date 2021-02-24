@@ -13,14 +13,14 @@ from replay_memory import ReplayMemory
 batch_size = 64  # batch大小
 num_episodes = 10000  # 训练次数
 memory_size = 20000  # 内存记忆
-learning_rate = 1e-3  # 学习率大小
+learning_rate = 1e-5  # 学习率大小
 e_greed = 0.1  # 探索初始概率
 gamma = 0.99  # 奖励系数
 e_greed_decrement = 1e-6  # 在训练过程中，降低探索的概率
 update_num = 0  # 用于计算目标模型更新次数
 save_model_path = "models/model.pdparams"  # 保存模型路径
 resize_shape = (1, 30, 90)  # 训练缩放的大小
-FPS = 25  # 控制游戏截图帧数
+FPS = 10  # 控制游戏截图帧数
 
 # 实例化一个游戏环境，参数为游戏名称
 env = DinoGame(reshape=resize_shape)
@@ -56,10 +56,10 @@ def evaluate():
         if done:
             break
         # 防止截图太快
-        fps_now = 1 / (time.time() - last_time)
-        if fps_now > FPS:
-            time.sleep(1 / FPS - 1 / fps_now)
-        last_time = time.time()
+        # fps_now = 1 / (time.time() - last_time)
+        # if fps_now > FPS:
+        #     time.sleep(1 / FPS - 1 / fps_now)
+        # last_time = time.time()
     return total_reward
 
 
@@ -81,7 +81,6 @@ def train():
             obs1 = np.expand_dims(obs, axis=0)
             action = policyQ(paddle.to_tensor(obs1, dtype='float32'))
             action = paddle.argmax(action).numpy()[0]
-
         # 执行游戏
         next_obs, reward, done, info = env.step(action)
         total_reward += reward
@@ -110,21 +109,21 @@ def train():
             target = batch_reword + gamma * max_v * (1.0 - batch_done)
             cost = paddle.nn.functional.mse_loss(pred_action_value, target)
             # 梯度更新
-            optimizer.clear_grad()
             cost.backward()
             optimizer.step()
+            optimizer.clear_grad()
             # 指定的训练次数更新一次目标模型的参数
             if update_num % 200 == 0:
                 targetQ.load_dict(policyQ.state_dict())
             update_num += 1
         # 防止截图太快
-        fps_now = 1 / (time.time() - last_time)
-        if fps_now > FPS:
-            time.sleep(1 / FPS - 1 / fps_now)
-        last_time = time.time()
+        # fps_now = 1 / (time.time() - last_time)
+        # if fps_now > FPS:
+        #     time.sleep(1 / FPS - 1 / fps_now)
+        # last_time = time.time()
         # 显示图像
-        img = cv2.putText(np.squeeze(obs), "%dFPS" % int(fps_now), (20, 10), cv2.FONT_ITALIC, 0.3, 255, 1)
-        cv2.imshow('obs', img)
+        # img = cv2.putText(np.squeeze(obs), "%dFPS" % int(fps_now), (20, 10), cv2.FONT_ITALIC, 0.3, 255, 1)
+        cv2.imshow('obs', np.squeeze(obs))
         cv2.waitKey(1)
     return total_reward
 

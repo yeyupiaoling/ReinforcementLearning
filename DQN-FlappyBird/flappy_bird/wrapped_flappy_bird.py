@@ -32,7 +32,7 @@ class GameState:
     def __init__(self):
         self.score = self.playerIndex = self.loopIter = 0
         self.playerx = int(SCREENWIDTH * 0.2)
-        self.playery = int((SCREENHEIGHT - PLAYER_HEIGHT) / 3)
+        self.playery = int((SCREENHEIGHT - PLAYER_HEIGHT) / 2)
         self.basex = 0
         self.baseShift = IMAGES['base'].get_width() - BACKGROUND_WIDTH
 

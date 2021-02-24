@@ -9,10 +9,10 @@ from model import Model
 from replay_memory import ReplayMemory
 
 # 定义训练的参数
-batch_size = 64  # batch大小
+batch_size = 256  # batch大小
 num_episodes = 10000  # 训练次数
 memory_size = 20000  # 内存记忆
-learning_rate = 1e-3  # 学习率大小
+learning_rate = 1e-4  # 学习率大小
 e_greed = 0.1  # 探索初始概率
 gamma = 0.99  # 奖励系数
 e_greed_decrement = 1e-6  # 在训练过程中，降低探索的概率
@@ -94,7 +94,6 @@ def train():
             obs1 = np.expand_dims(obs, axis=0)
             action = policyQ(paddle.to_tensor(obs1, dtype='float32'))
             action = paddle.argmax(action).numpy()[0]
-
         # 执行游戏
         next_obs, reward, done, info = env.step(action)
         next_obs = preprocess(next_obs)
@@ -122,9 +121,9 @@ def train():
 
             cost = paddle.nn.functional.mse_loss(pred_action_value, target)
             # 梯度更新
-            optimizer.clear_grad()
             cost.backward()
             optimizer.step()
+            optimizer.clear_grad()
             # 指定的训练次数更新一次目标模型的参数
             if update_num % 200 == 0:
                 targetQ.load_dict(policyQ.state_dict())

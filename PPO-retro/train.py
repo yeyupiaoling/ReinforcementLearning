@@ -138,9 +138,9 @@ def train(args):
                 # 计算全部损失
                 total_loss = actor_loss + critic_loss - args.beta * entropy_loss
                 # 计算梯度
-                optimizer.clear_grad()
                 total_loss.backward()
                 optimizer.step()
+                optimizer.clear_grad()
             paddle.save(model.state_dict(), "{}/model_{}.pdparams".format(args.saved_path, args.game))
         print("Episode: {}. Total loss: {:.4f}".format(curr_episode, total_loss.numpy()[0]))
 

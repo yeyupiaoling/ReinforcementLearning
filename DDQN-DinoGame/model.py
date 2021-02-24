@@ -5,10 +5,10 @@ import paddle.nn.functional as F
 class Model(nn.Layer):
     def __init__(self, num_inputs, num_actions):
         super(Model, self).__init__()
-        self.conv1 = nn.Conv2D(num_inputs, 32, 3, stride=2, padding=1)
-        self.conv2 = nn.Conv2D(32, 32, 3, stride=2, padding=1)
-        self.conv3 = nn.Conv2D(32, 64, 3, stride=2, padding=1)
-        self.linear = nn.Linear(64 * 4 * 12, 256)
+        self.conv1 = nn.Conv2D(num_inputs, 32, 3, stride=3)
+        self.conv2 = nn.Conv2D(32, 32, 3, stride=3)
+        self.conv3 = nn.Conv2D(32, 64, 3, stride=1)
+        self.linear = nn.Linear(64 * 1 * 8, 256)
         self.flatten = nn.Flatten()
         self.fc = nn.Linear(256, num_actions)
 

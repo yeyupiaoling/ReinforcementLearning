@@ -1,4 +1,5 @@
 import os
+import sys
 
 os.environ['OMP_NUM_THREADS'] = '1'
 import argparse
@@ -60,7 +61,7 @@ def train(args):
     curr_states = [agent_conn.recv() for agent_conn in envs.agent_conns]
     curr_states = paddle.to_tensor(np.concatenate(curr_states, 0), dtype='float32')
     curr_episode = 0
-    while True:
+    while curr_episode < 400:
         curr_episode += 1
         old_log_policies, actions, values, states, rewards, dones = [], [], [], [], [], []
         for _ in range(args.num_local_steps):
@@ -136,14 +137,22 @@ def train(args):
                 # 计算全部损失
                 total_loss = actor_loss + critic_loss - args.beta * entropy_loss
                 # 计算梯度
-                optimizer.clear_grad()
                 total_loss.backward()
                 optimizer.step()
+                optimizer.clear_grad()
             paddle.save(model.state_dict(), "{}/model_{}_{}.pdparams".format(args.saved_path, args.world, args.stage))
         print("Episode: {}. Total loss: {:.4f}".format(curr_episode, total_loss.numpy()[0]))
+        if os.path.exists("{}/model_{}_{}_finish.pdparams".format(args.saved_path, args.world, args.stage)):
+            process.kill()
+            envs.close()
+            print('顺利通关，world=%d, stage=%d' % (args.world, args.stage))
+            break
+    process.kill()
+    envs.close()
 
 
 if __name__ == "__main__":
     args = get_args()
     print_arguments(args)
     train(args)
+    print('训练结束\n\n')

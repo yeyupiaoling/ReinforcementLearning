@@ -37,10 +37,10 @@ def main():
         obs, reward, done, info = env.step(action)
         episode_reward += reward
         # 防止截图太快
-        fps_now = 1 / (time.time() - last_time)
-        if fps_now > FPS:
-            time.sleep(1 / FPS - 1 / fps_now)
-        last_time = time.time()
+        # fps_now = 1 / (time.time() - last_time)
+        # if fps_now > FPS:
+        #     time.sleep(1 / FPS - 1 / fps_now)
+        # last_time = time.time()
     print("最终得分为：{:.2f}".format(episode_reward))
 
 

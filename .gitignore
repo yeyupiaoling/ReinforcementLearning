@@ -4,6 +4,7 @@ __pycache__/
 roms/
 DQN-FlappyBird/models
 DDQN-DinoGame/models
+PPO-SuperMarioBros/log
 PPO-SuperMarioBros/models
 PPO-retro/models
 course5/models
